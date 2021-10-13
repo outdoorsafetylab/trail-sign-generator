@@ -24,6 +24,8 @@ mask = File.join(base_dir, input['mask'])
 output = spec['output']
 output_dir = File.join(base_dir, output['dir'])
 slot = output['slot']
+gsubs = slot['gsub']
+gsubs = {} unless gsubs
 repeat = slot['repeat']
 max = repeat['num']
 slots_per_pages = repeat['x']*repeat['y']
@@ -63,12 +65,13 @@ CSV.foreach(data).with_index do |row, row_num|
 end
 
 num_pages = (total.to_f / slots_per_pages).ceil()
-output_page_files = []
+output_svg_files = []
+output_pdf_files = []
 
 for i in 1..num_pages do
-  page_file = "#{output_dir}/intermediate/#{sprintf("page_%02d.svg", i)}"
-  puts "Creating page SVG: #{page_file}"
-  File.open(page_file, "w+") do |f|
+  output_svg_file = "#{output_dir}/intermediate/#{sprintf("page_%02d.svg", i)}"
+  puts "Creating page SVG: #{output_svg_file}"
+  File.open(output_svg_file, "w+") do |f|
     f.puts '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
     w = output['w']
     h = output['h']
@@ -90,7 +93,7 @@ for i in 1..num_pages do
       File.foreach(input_file).with_index do |line, line_num|
         next if line_num == 0
         line = line.gsub('<svg', '<g').gsub('</svg>', '</g>')
-        slot['gsub'].each do |k,v|
+        gsubs.each do |k,v|
           line = line.gsub(k, v)
         end
         f.puts line
@@ -100,15 +103,16 @@ for i in 1..num_pages do
     end
     f.puts '</svg>'
   end
-  output_page_file = "#{output_dir}/intermediate/#{sprintf("page_%02d.pdf", i)}"
-  puts "Exporting page PDF: #{output_page_file}"
-  sh "inkscape #{page_file} --export-plain-svg --export-text-to-path --export-filename=#{output_page_file}"
-  output_page_files.push output_page_file
+  output_svg_files.push output_svg_file
+  output_pdf_file = "#{output_dir}/intermediate/#{sprintf("page_%02d.pdf", i)}"
+  puts "Exporting page PDF: #{output_pdf_file}"
+  sh "inkscape #{output_svg_file} --export-plain-svg --export-text-to-path --export-filename=#{output_pdf_file}"
+  output_pdf_files.push output_pdf_file
 end
 
-mask_file = "#{output_dir}/intermediate/mask.svg"
-puts "Creating mask SVG: #{mask_file}"
-File.open(mask_file, "w+") do |f|
+mask_svg_file = "#{output_dir}/intermediate/mask.svg"
+puts "Creating mask SVG: #{mask_svg_file}"
+File.open(mask_svg_file, "w+") do |f|
   f.puts '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
   w = output['w']
   h = output['h']
@@ -127,22 +131,31 @@ File.open(mask_file, "w+") do |f|
     f.puts "<g transform=\"translate(#{x},#{y})\">"
     File.foreach(mask).with_index do |line, line_num|
       next if line_num == 0
-      f.puts line.gsub('<svg', '<g').gsub('</svg>', '</g>')
+      line = line.gsub('<svg', '<g').gsub('</svg>', '</g>')
+      gsubs.each do |k,v|
+        line = line.gsub(k, v)
+      end
+      f.puts line
     end
     f.puts '</g>'
   end
   f.puts '</svg>'
 end
 
-output_mask_file = "#{output_dir}/intermediate/#{sprintf("mask.pdf")}"
-puts "Exporting mask PDF: #{output_mask_file}"
-sh "inkscape #{mask_file} --export-plain-svg --export-text-to-path --export-filename=#{output_mask_file}"
+mask_pdf_file = "#{output_dir}/intermediate/#{sprintf("mask.pdf")}"
+puts "Exporting mask PDF: #{mask_pdf_file}"
+sh "inkscape #{mask_svg_file} --export-plain-svg --export-text-to-path --export-filename=#{mask_pdf_file}"
 
 timestamp = Time.now.strftime('%Y%m%d%H%M%S')
-output_file = "#{output_dir}/#{output['prefix']}#{timestamp}_RGB.pdf"
-puts "Merging all PDF files: #{output_file}"
-sh "pdfunite #{output_page_files.join(' ')} #{output_mask_file} #{output_file}"
 
-output_cmyk_file = "#{output_dir}/#{output['prefix']}#{timestamp}_CMYK.pdf"
-puts "Converting to CMYK: #{output_cmyk_file}"
-sh "gs -dSAFER -dBATCH -dNOPAUSE -dNOCACHE -sDEVICE=pdfwrite -dAutoRotatePages=/None -sColorConversionStrategy=CMYK -dProcessColorModel=/DeviceCMYK -sOutputFile=#{output_cmyk_file} #{output_file}"
+svg_zip_file = "#{output_dir}/#{output['prefix']}#{timestamp}.zip"
+puts "Creating zip for all SVG files: #{svg_zip_file}"
+sh "cd #{output_dir}/intermediate/ && zip #{File.expand_path(svg_zip_file)} *.svg"
+
+merged_pdf_file = "#{output_dir}/#{output['prefix']}#{timestamp}_RGB.pdf"
+puts "Merging all PDF files: #{merged_pdf_file}"
+sh "pdfunite #{output_pdf_files.join(' ')} #{mask_pdf_file} #{merged_pdf_file}"
+
+merged_cmyk_pdf_file = "#{output_dir}/#{output['prefix']}#{timestamp}_CMYK.pdf"
+puts "Converting to CMYK: #{merged_cmyk_pdf_file}"
+sh "gs -dSAFER -dBATCH -dNOPAUSE -dNOCACHE -sDEVICE=pdfwrite -dAutoRotatePages=/None -sColorConversionStrategy=CMYK -dProcessColorModel=/DeviceCMYK -sOutputFile=#{merged_cmyk_pdf_file} #{merged_pdf_file}"

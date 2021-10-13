@@ -89,7 +89,11 @@ for i in 1..num_pages do
       f.puts "<g transform=\"translate(#{x},#{y})\">"
       File.foreach(input_file).with_index do |line, line_num|
         next if line_num == 0
-        f.puts line.gsub('<svg', '<g').gsub('</svg>', '</g>')
+        line = line.gsub('<svg', '<g').gsub('</svg>', '</g>')
+        slot['gsub'].each do |k,v|
+          line = line.gsub(k, v)
+        end
+        f.puts line
       end
       f.puts '</g>'
       break if n >= total
@@ -102,7 +106,7 @@ for i in 1..num_pages do
   output_page_files.push output_page_file
 end
 
-mask_file = "#{output_dir}/intermediate/mask.svg}"
+mask_file = "#{output_dir}/intermediate/mask.svg"
 puts "Creating mask SVG: #{mask_file}"
 File.open(mask_file, "w+") do |f|
   f.puts '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
@@ -134,10 +138,11 @@ output_mask_file = "#{output_dir}/intermediate/#{sprintf("mask.pdf")}"
 puts "Exporting mask PDF: #{output_mask_file}"
 sh "inkscape #{mask_file} --export-plain-svg --export-text-to-path --export-filename=#{output_mask_file}"
 
-output_file = "#{output_dir}/#{output['prefix']}rgb.pdf"
+timestamp = Time.now.strftime('%Y%m%d%H%M%S')
+output_file = "#{output_dir}/#{output['prefix']}#{timestamp}_RGB.pdf"
 puts "Merging all PDF files: #{output_file}"
 sh "pdfunite #{output_page_files.join(' ')} #{output_mask_file} #{output_file}"
 
-output_cmyk_file = "#{output_dir}/#{output['prefix']}cmyk.pdf"
+output_cmyk_file = "#{output_dir}/#{output['prefix']}#{timestamp}_CMYK.pdf"
 puts "Converting to CMYK: #{output_cmyk_file}"
 sh "gs -dSAFER -dBATCH -dNOPAUSE -dNOCACHE -sDEVICE=pdfwrite -dAutoRotatePages=/None -sColorConversionStrategy=CMYK -dProcessColorModel=/DeviceCMYK -sOutputFile=#{output_cmyk_file} #{output_file}"

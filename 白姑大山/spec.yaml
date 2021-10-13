@@ -13,5 +13,6 @@ output:
     w: 112.035
     h: 103.046
     repeat:
+      num: 6
       x: 5
       y: 4

@@ -5,7 +5,7 @@ require 'yaml'
 require 'base64'
 
 def help
-  puts "#{__FILE__} <Data CSV> <Template SVG>"
+  puts "#{__FILE__} <YAML>"
 end
 
 if ARGV.size != 1
@@ -23,9 +23,12 @@ tmpl = File.join(base_dir, input['template'])
 mask = File.join(base_dir, input['mask'])
 output = spec['output']
 output_dir = File.join(base_dir, output['dir'])
+slot = output['slot']
+repeat = slot['repeat']
+max = repeat['num']
+slots_per_pages = repeat['x']*repeat['y']
 
 cols = []
-max = nil # some integer
 total = 0
 
 puts "Reading data CSV: #{data}"
@@ -59,9 +62,6 @@ CSV.foreach(data).with_index do |row, row_num|
   end
 end
 
-slot = output['slot']
-repeat = slot['repeat']
-slots_per_pages = repeat['x']*repeat['y']
 num_pages = (total.to_f / slots_per_pages).ceil()
 output_page_files = []
 
@@ -96,13 +96,13 @@ for i in 1..num_pages do
     end
     f.puts '</svg>'
   end
-  mask_file = "#{output_dir}/intermediate/#{sprintf("mask_%02d.svg", i)}"
   output_page_file = "#{output_dir}/intermediate/#{sprintf("page_%02d.pdf", i)}"
   puts "Exporting page PDF: #{output_page_file}"
   sh "inkscape #{page_file} --export-plain-svg --export-text-to-path --export-filename=#{output_page_file}"
   output_page_files.push output_page_file
 end
 
+mask_file = "#{output_dir}/intermediate/mask.svg}"
 puts "Creating mask SVG: #{mask_file}"
 File.open(mask_file, "w+") do |f|
   f.puts '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'

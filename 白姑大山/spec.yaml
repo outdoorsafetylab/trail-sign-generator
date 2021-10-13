@@ -4,6 +4,7 @@ input:
   mask: mask.svg
 output:
   dir: output
+  prefix: SM400_
   w: 610
   h: 488
   slot:

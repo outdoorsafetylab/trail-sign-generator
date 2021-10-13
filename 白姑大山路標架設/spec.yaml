@@ -1,0 +1,16 @@
+input:
+  template: template.svg
+  data: data.csv
+  mask: mask.svg
+output:
+  dir: output
+  w: 610
+  h: 488
+  slot:
+    x: 26.28
+    y: 40.251
+    w: 112.171
+    h: 103.046
+    repeat:
+      x: 5
+      y: 4

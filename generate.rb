@@ -25,7 +25,7 @@ output = spec['output']
 output_dir = File.join(base_dir, output['dir'])
 
 cols = []
-max = 1
+max = 30
 total = 0
 
 puts "Reading data CSV: #{data}"
@@ -88,7 +88,8 @@ for i in 1..num_pages do
       # f.puts "<image x=\"#{x}\" y=\"#{y}\" width=\"#{w}\" height=\"#{h}\" xlink:href=\"data:image/svg+xml;base64,#{base64}\" />"
       f.puts "<g transform=\"translate(#{x},#{y})\">"
       File.foreach(input_file).with_index do |line, line_num|
-        f.puts line unless line_num == 0
+        next if line_num == 0
+        f.puts line.gsub('<svg', '<g').gsub('</svg>', '</g>')
       end
       f.puts '</g>'
       break if n >= total
@@ -111,8 +112,14 @@ for i in 1..num_pages do
       y *= h
       x += slot['x']
       y += slot['y']
-      base64 = Base64.encode64(File.read(mask))
-      f.puts "<image x=\"#{x}\" y=\"#{y}\" width=\"#{w}\" height=\"#{h}\" xlink:href=\"data:image/svg+xml;base64,#{base64}\" />"
+      # base64 = Base64.encode64(File.read(mask))
+      # f.puts "<image x=\"#{x}\" y=\"#{y}\" width=\"#{w}\" height=\"#{h}\" xlink:href=\"data:image/svg+xml;base64,#{base64}\" />"
+      f.puts "<g transform=\"translate(#{x},#{y})\">"
+      File.foreach(mask).with_index do |line, line_num|
+        next if line_num == 0
+        f.puts line.gsub('<svg', '<g').gsub('</svg>', '</g>')
+      end
+      f.puts '</g>'
       n = slots_per_pages*(i-1)+j
       break if n >= total
     end

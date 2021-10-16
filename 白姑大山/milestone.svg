@@ -8,7 +8,7 @@
    version="1.1"
    id="svg4201"
    inkscape:version="1.1.1 (1:1.1+202109281949+c3084ef5ed)"
-   sodipodi:docname="template.svg"
+   sodipodi:docname="milestone.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -169,7 +169,7 @@
        inkscape:label="segment_line_1"><tspan
          x="196.14849"
          y="160.57953"
-         id="tspan109730">分段第一行</tspan></text>
+         id="tspan102">分段第一行</tspan></text>
     <text
        xml:space="preserve"
        transform="matrix(0.24684943,-0.24684943,0.24684943,0.24684943,-45.733162,65.549688)"
@@ -180,7 +180,7 @@
        inkscape:label="segment_line_2"><tspan
          x="207.58404"
          y="160.57953"
-         id="tspan109732">分段第二行</tspan></text>
+         id="tspan104">分段第二行</tspan></text>
     <text
        xml:space="preserve"
        transform="matrix(0.24684943,-0.24684943,0.24684943,0.24684943,-47.961177,33.571535)"
@@ -191,9 +191,9 @@
        inkscape:label="trail_number"><tspan
          x="139.97439"
          y="186.0395"
-         id="tspan109736"><tspan
+         id="tspan108"><tspan
            style="font-weight:bold"
-           id="tspan109734">路線</tspan></tspan></text>
+           id="tspan106">路線</tspan></tspan></text>
     <text
        xml:space="preserve"
        transform="matrix(0.24684943,-0.24684943,0.24684943,0.24684943,-29.068578,66.023626)"
@@ -204,12 +204,12 @@
        inkscape:label="landmark"><tspan
          x="151.44209"
          y="175.31957"
-         id="tspan109740"><tspan
+         id="tspan112"><tspan
            style="font-weight:bold"
-           id="tspan109738">地標名稱</tspan></tspan></text>
+           id="tspan110">地標名稱</tspan></tspan></text>
     <text
        xml:space="preserve"
-       transform="matrix(0.24684943,-0.24684943,0.24684943,0.24684943,-9.5347841,65.2504)"
+       transform="matrix(0.24684943,-0.24684943,0.24684943,0.24684943,-11.122285,63.662899)"
        id="text60069-8-3-8"
        style="font-size:32px;line-height:1.25;font-family:'Noto Sans CJK TC';-inkscape-font-specification:'Noto Sans CJK TC';text-align:center;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect60071-3-8-1-8);display:inline;stroke-width:0.757906"
        x="98.5438"
@@ -217,12 +217,12 @@
        inkscape:label="numerator"><tspan
          x="131.45905"
          y="180.67953"
-         id="tspan109744"><tspan
+         id="tspan116"><tspan
            style="font-weight:bold"
-           id="tspan109742">里程</tspan></tspan></text>
+           id="tspan114">里程</tspan></tspan></text>
     <text
        xml:space="preserve"
-       transform="matrix(0.24684943,-0.24684943,0.24684943,0.24684943,5.3984358,70.065139)"
+       transform="matrix(0.24684943,-0.24684943,0.24684943,0.24684943,3.8109357,68.477638)"
        id="text60069-8-3-8-4"
        style="font-size:18.6667px;line-height:1.25;font-family:'Noto Sans CJK TC';-inkscape-font-specification:'Noto Sans CJK TC';text-align:center;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect60071-3-8-1-6-5);display:inline;stroke-width:0.757906"
        x="98.5438"
@@ -230,14 +230,14 @@
        inkscape:label="denominator"><tspan
          x="115.05176"
          y="167.27957"
-         id="tspan109746">總里程</tspan></text>
+         id="tspan118">總里程</tspan></text>
     <rect
        style="display:inline;fill:#000000;stroke:none;stroke-width:1.32292;stroke-linejoin:round;stroke-dasharray:2.64583, 1.32292"
        id="rect105957"
        width="17.677732"
        height="0.58687705"
        x="-4.6065216"
-       y="104.44277"
+       y="102.19773"
        transform="rotate(-45)" />
     <text
        xml:space="preserve"
@@ -249,7 +249,7 @@
        inkscape:label="notes_bottom_left"><tspan
          x="43.880859"
          y="341.75739"
-         id="tspan109748">左下角備註</tspan></text>
+         id="tspan120">左下角備註</tspan></text>
     <text
        xml:space="preserve"
        transform="matrix(0,-0.26458333,0.26458333,0,1.1264583,89.47856)"
@@ -260,7 +260,7 @@
        inkscape:label="notes_bottom_right"><tspan
          x="125.4256"
          y="341.75739"
-         id="tspan109750">右下角備註</tspan></text>
+         id="tspan122">右下角備註</tspan></text>
   </g>
   <g
      inkscape:groupmode="layer"

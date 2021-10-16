@@ -33,6 +33,8 @@ slots_per_pages = repeat['x']*repeat['y']
 cols = []
 total = 0
 
+sh "rm -rf #{output_dir}/intermediate/"
+
 puts "Reading data CSV: #{data}"
 CSV.foreach(data).with_index do |row, row_num|
   if row_num == 0

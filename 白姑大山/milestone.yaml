@@ -1,10 +1,10 @@
 input:
-  template: template.svg
-  data: data.csv
+  template: milestone.svg
+  data: milestone.csv
   mask: mask.svg
 output:
   dir: output
-  prefix: SM400_
+  prefix: SM400_編碼路標_
   w: 610
   h: 488
   slot:
@@ -18,6 +18,6 @@ output:
     w: 112.035
     h: 103.046
     repeat:
-      num: 6
+      # num: 6
       x: 5
       y: 4

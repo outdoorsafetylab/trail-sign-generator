@@ -1,0 +1,17 @@
+input:
+  template: blank.svg
+  data: blank.csv
+  mask: mask.svg
+output:
+  dir: output
+  prefix: SM400_空白路標_
+  w: 610
+  h: 488
+  slot:
+    x: 26.28
+    y: 40.251
+    w: 112.035
+    h: 103.046
+    repeat:
+      x: 5
+      y: 4

@@ -1,8 +1,8 @@
 # 路標產生器
 
-![logo](logo.png)
+![logo](images/logo.png)
 
-透過 CSV 資料檔及 SVG 樣版檔，大量產生出台灣目前推行的制式化山徑路標，最後合併為 PDF 檔案。產生出之 SVG 格式檔案可委由[科邁銘版](https://www.comaxglobal.com/zh/)進行生產，生產製具使用權請洽[桃園市山岳協會](https://www.tytaaa.org.tw/)。
+透過 CSV 資料檔及 SVG 樣版檔，大量產生出台灣目前推行的制式化山徑路標，最後合併為 PDF 檔案。產生出之 SVG 格式檔案可委由[科邁銘板](https://www.comaxglobal.com/zh/)進行生產，生產製具使用權請洽[桃園市山岳協會](https://www.tytaaa.org.tw/)。
 
 ## 源起
 
@@ -40,7 +40,7 @@ ruby generate.rb <設定檔路徑>
 
 ```
 input:
-  template: 樣版檔 SVG (可使用 Inkscape 編輯並修改)
+  template: 樣版檔 SVG
   data: 資料檔 CSV
   mask: 遮罩檔 SVG (標示要切割反光材質的區域)
 output:
@@ -57,6 +57,26 @@ output:
       x: X軸路標數量
       y: Y軸路標數量
 ```
+
+### CSV 資料檔
+
+![CSV 資料檔](images/data-example.png)
+
+資料檔的第一列為資料名稱，程式會從第二列開始在 SVG 樣版檔中尋找資料名稱，並取代為資料內容，最後產生出 SVG 檔。
+
+### SVG 樣版檔
+
+樣版檔可使用 Inkscape 編輯並修改，請留意文字大小及文字框位置，以免文字超出範圍。輸出前請隱藏外框及釘孔，以免製具誤差造成的問題。白姑大山路標樣版檔中，外框及釘孔均在其專用圖層中，可直接控制圖層來隱藏或顯示。
+
+| 輸出用(隱藏外框及釘孔) | 預覽用(顯示外框及釘孔)  |
+| ---  | --- |
+| ![輸出用(隱藏外框及釘孔)](images/template-1.png) | ![預覽用(顯示外框及釘孔)](images/template-2.png) |
+
+### PDF 輸出檔
+
+程式最後會產生出多頁如以下內容的 PDF 檔，送印前請務必再次人工確認：
+
+![PDF 輸出](images/page-output.png)
 
 ## 已知限制
 

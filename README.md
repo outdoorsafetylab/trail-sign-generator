@@ -2,7 +2,7 @@
 
 ![logo](images/logo.png)
 
-透過 CSV 資料檔及 SVG 樣版檔，大量產生出台灣目前推行的制式化山徑路標，最後合併為 PDF 檔案。產生出之 SVG 格式檔案可委由[科邁銘板](https://www.comaxglobal.com/zh/)進行生產，生產製具使用權請洽[桃園市山岳協會](https://www.tytaaa.org.tw/)。
+透過 CSV 資料檔及 SVG 樣版檔，大量產生出台灣目前推行的[系統化反光路標](http://taiwanmt.nchu.edu.tw/download/C2-2%E5%BC%B5%E5%9C%8B%E9%9B%84.pdf)，最後合併為 PDF 檔案。產生出之檔案可委由[科邁銘板](https://www.comaxglobal.com/zh/)進行生產，生產製具使用權請洽[桃園市山岳協會](https://www.tytaaa.org.tw/)。
 
 ## 源起
 

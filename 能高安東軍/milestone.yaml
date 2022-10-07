@@ -1,0 +1,23 @@
+input:
+  template: milestone.svg
+  data: milestone.csv
+  mask: mask.svg
+output:
+  dir: output
+  prefix: CM320_編碼路標_
+  w: 610
+  h: 488
+  slot:
+    # gsub:
+    #   '#000000;': '#000000 device-cmyk(0,0,0,1);'
+    #   '#ffffff;': '#ffffff device-cmyk(0,0,0,0);'
+    #   '#b2b2b2;': '#b2b2b2 device-cmyk(0,0,0,0.3);'
+    #   '#ffff00;': '#ffff00 device-cmyk(0,0,1,0);'
+    x: 26.28
+    y: 40.251
+    w: 112.035
+    h: 103.046
+    repeat:
+      # num: 6
+      x: 5
+      y: 4

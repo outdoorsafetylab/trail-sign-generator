@@ -30,6 +30,16 @@
 ruby generate.rb <設定檔路徑>
 ```
 
+例如：
+
+```shell
+ruby generate.rb 白姑大山/milestone.yaml
+```
+
+```shell
+ruby generate.rb 白姑大山/blank.yaml
+```
+
 產出之檔案會存放在 `output/` 資料夾之下，中繼檔案會暫存於 `output/intermediate/` 內。產出之檔案主要有三個部份：
 
 - `xxxx_RGB.pdf`: RGB 色彩空間的 PDF

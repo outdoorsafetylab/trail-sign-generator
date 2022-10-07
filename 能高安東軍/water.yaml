@@ -1,0 +1,17 @@
+input:
+  template: water.svg
+  data: water.csv
+  mask: mask.svg
+output:
+  dir: output
+  prefix: 水源_
+  w: 610
+  h: 488
+  slot:
+    x: 26.28
+    y: 40.251
+    w: 112.035
+    h: 103.046
+    repeat:
+      x: 5
+      y: 4

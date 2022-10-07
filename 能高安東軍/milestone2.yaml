@@ -4,7 +4,7 @@ input:
   mask: mask.svg
 output:
   dir: output
-  prefix: CM301_編碼路標_
+  prefix: CM323_編碼路標_
   w: 610
   h: 488
   slot:

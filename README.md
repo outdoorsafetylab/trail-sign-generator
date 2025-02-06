@@ -78,6 +78,51 @@ output:
 
 ![PDF 輸出](images/page-output.png)
 
+
+## docker 使用方式
+
+To build the docker image, run the following command:
+
+```shell
+$ docker build -t rudychung/tsg docker
+[+] Building 124.1s (22/22) FINISHED
+ => => naming to docker.io/rudychung/tsg:latest         0.0s
+ => => unpacking to docker.io/rudychung/tsg:latest      4.5s
+```
+
+To run the docker image with a GUI, run the following command:
+
+```shell
+$ ./run_tsg_docker.py
+$
+```
+
+To run the docker image, run the following command:
+
+```shell
+$ docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM rudychung/tsg 白姑大山/milestone.yaml
+## ...
+$
+```
+
+To run the docker image with a shell, run the following command:
+
+```shell
+docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM --entrypoint /bin/bash rudychung/tsg --login
+builder@3b3c534456eb:~$ cd workdir/
+builder@3b3c534456eb:~/workdir$ ruby generate.rb 白姑大山/milestone.yaml 
+Reading spec: 
+rm -rf 白姑大山/output/intermediate/
+Reading data CSV: 白姑大山/milestone.csv
+Replacing with headers: ["里程(公里)", "路線", "總里程", "里程", "地標名稱", "分段第一行", "分段第二行", "左下角備註", "右下角備註"]
+Creating intermediate SVG: 白姑大山/output/intermediate/sign_0001.svg
+...
+Processing pages 1 through 10.
+Page 1
+Page 2
+```
+
+
 ## 已知限制
 
 - SVG 原生僅支援 RGB，即使將最後將 PDF 轉為 CMYK 也無法產生如 Y100 或 K100 等顏色。但以路標的需求來說，並不會有太大的問題。

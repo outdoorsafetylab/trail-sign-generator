@@ -4,3 +4,4 @@
 /_internal/
 run_tsg_docker
 run_tsg_docker.spec
+output/

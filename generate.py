@@ -1,251 +1,227 @@
 #!/usr/bin/env python3
-
-import sys
-import os
+import argparse
 import csv
-import yaml
 import math
-import time
+import shutil
 import subprocess
+import time
+import zipfile
+import logging
+from pathlib import Path
+import yaml
 
-def help_message():
-    print(f"Usage: {os.path.basename(sys.argv[0])} <YAML>")
-    print("Please provide exactly one argument: the path to the YAML spec file.")
+try:
+    from PyPDF2 import PdfMerger
+except ImportError:
+    PdfMerger = None
 
-def main():
-    if len(sys.argv) != 2:
-        help_message()
-        sys.exit(1)
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-    spec_file = sys.argv[1]
-    base_dir = os.path.dirname(spec_file)
-    if not base_dir:
-        base_dir = "."
+def run_cmd(cmd, cwd=None):
+    logging.info(f"Running command: {cmd}")
+    subprocess.run(cmd, shell=True, check=True, cwd=cwd)
 
-    print(f"Reading spec: {spec_file}")
-    with open(spec_file, "r", encoding="utf-8") as f:
-        spec = yaml.safe_load(f)
+def vectorize_svg(svg_file: Path):
+    """Run Inkscape to vectorize the SVG."""
+    cmd = f'inkscape "{svg_file}" --export-plain-svg --export-text-to-path --export-filename="{svg_file}"'
+    run_cmd(cmd)
 
-    input_spec = spec["input"]
-    data_csv = os.path.join(base_dir, input_spec["data"])
-    tmpl_svg = os.path.join(base_dir, input_spec["template"])
-    mask_svg = os.path.join(base_dir, input_spec["mask"])
+def merge_pdfs(pdf_files, output_pdf):
+    """Merge PDF files using PyPDF2 if available, else fallback to pdfunite."""
+    if PdfMerger:
+        merger = PdfMerger()
+        for pdf in pdf_files:
+            merger.append(str(pdf))
+        with output_pdf.open("wb") as fout:
+            merger.write(fout)
+        merger.close()
+    else:
+        pdf_files_str = " ".join(f'"{p}"' for p in pdf_files)
+        cmd = f'pdfunite {pdf_files_str} "{output_pdf}"'
+        run_cmd(cmd)
 
-    output_spec = spec["output"]
-    output_dir = os.path.join(base_dir, output_spec["dir"])
-    prefix = output_spec.get("prefix", "output_")
+def convert_to_cmyk(input_pdf: Path, output_pdf: Path):
+    """Convert a PDF to CMYK using Ghostscript."""
+    cmd = (
+        f'gs -dSAFER -dBATCH -dNOPAUSE -dNOCACHE -sDEVICE=pdfwrite '
+        f'-dAutoRotatePages=/None -sColorConversionStrategy=CMYK '
+        f'-dProcessColorModel=/DeviceCMYK -sOutputFile="{output_pdf}" "{input_pdf}"'
+    )
+    run_cmd(cmd)
 
-    slot_info = output_spec["slot"]
-    gsubs = slot_info.get("gsub", {})  # dictionary of replacements
-    repeat = slot_info["repeat"]
-    max_num = repeat.get("num", None)
-    slots_per_page = repeat["x"] * repeat["y"]
-
-    # 1) Remove intermediate directory if it exists
-    intermediate_dir = os.path.join(output_dir, "intermediate")
-    print(f"Removing any existing intermediate directory: {intermediate_dir}")
-    subprocess.run(["rm", "-rf", intermediate_dir], check=True)
-
-    # 2) Read CSV and create intermediate SVGs
-    print(f"Reading data CSV: {data_csv}")
-    os.makedirs(intermediate_dir, exist_ok=True)
-
-    headers = []
+def process_csv_and_create_svgs(spec, base_dir: Path, intermediate_dir: Path) -> int:
+    """Process the CSV, generate intermediate SVG files, and vectorize them."""
+    input_spec = spec['input']
+    data_file = base_dir / input_spec['data']
+    template_file = base_dir / input_spec['template']
+    
     total = 0
+    cols = []
 
-    with open(data_csv, "r", encoding="utf-8") as csvfile:
+    logging.info(f"Reading CSV data: {data_file}")
+    with data_file.open(newline='', encoding="utf-8-sig") as csvfile:
         reader = csv.reader(csvfile)
-        for row_index, row in enumerate(reader):
-            if row_index == 0:
-                # First row is column headers
-                headers = row
-                print(f"Replacing with headers: {headers}")
+        for row_num, row in enumerate(reader):
+            if row_num == 0:
+                cols = row
+                logging.info(f"Using headers: {cols}")
             else:
-                sign_filename = f"sign_{row_index:04d}.svg"
-                sign_path = os.path.join(intermediate_dir, sign_filename)
-
-                # Replace placeholders in the template and write out an SVG
-                with open(tmpl_svg, "r", encoding="utf-8") as tmpl_f, \
-                     open(sign_path, "w", encoding="utf-8") as sign_f:
-                    for line in tmpl_f:
-                        for col_idx, col_val in enumerate(row):
-                            col_val = col_val if col_val else ""
-                            line = line.replace(headers[col_idx], col_val)
-                        sign_f.write(line)
-
-                # 3) Vectorize (text-to-path) the SVG via Inkscape
-                #    Overwrite the original file in place
-                #    (exactly as in the Ruby script)
-                print(f"Vectorizing SVG: {sign_path}")
-                subprocess.run([
-                    "inkscape",
-                    sign_path,
-                    "--export-plain-svg",
-                    "--export-text-to-path",
-                    f"--export-filename={sign_path}"
-                ], check=True)
-
+                svg_filename = intermediate_dir / f"sign_{row_num:04d}.svg"
+                logging.info(f"Creating intermediate SVG: {svg_filename}")
+                with svg_filename.open("w", encoding="utf-8") as outfile:
+                    with template_file.open("r", encoding="utf-8") as tmpl:
+                        for line in tmpl:
+                            for col_num, value in enumerate(row):
+                                # Use an empty string if value is None or empty.
+                                value = value or ""
+                                header = cols[col_num]
+                                line = line.replace(header, value)
+                            outfile.write(line)
+                vectorize_svg(svg_filename)
                 total += 1
+                max_num = spec['output']['slot']['repeat'].get('num')
                 if max_num is not None and total >= max_num:
                     break
+    return total
 
-    # 4) Determine how many pages we need
-    num_pages = math.ceil(total / slots_per_page) if slots_per_page > 0 else 0
-
-    # We'll keep track of the page PDFs in a list
+def create_page_svgs(spec, intermediate_dir: Path, total: int) -> (list, list):
+    """Compose intermediate SVGs into page layouts and convert them to PDFs."""
+    output_spec = spec['output']
+    slot = output_spec['slot']
+    repeat = slot['repeat']
+    slots_per_page = repeat['x'] * repeat['y']
+    num_pages = math.ceil(total / slots_per_page)
+    
+    output_svg_files = []
     output_pdf_files = []
-
-    # 5) Generate page_XX.svg, then convert them to PDF
-    for page_num in range(1, num_pages + 1):
-        page_svg = f"page_{page_num:02d}.svg"
-        page_svg_path = os.path.join(intermediate_dir, page_svg)
-
-        print(f"Creating page SVG: {page_svg_path}")
-        with open(page_svg_path, "w", encoding="utf-8") as pf:
-            w = output_spec["w"]
-            h = output_spec["h"]
-            pf.write(
-                f'''<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg width="{w}mm" height="{h}mm" viewBox="0 0 {w} {h}" version="1.1"
-     xmlns="http://www.w3.org/2000/svg"
-     xmlns:svg="http://www.w3.org/2000/svg"
-     xmlns:xlink="http://www.w3.org/1999/xlink">
-'''
-            )
-            for slot_index in range(1, slots_per_page + 1):
-                sign_num = slots_per_page * (page_num - 1) + slot_index
-                if sign_num > total:
+    page_w = output_spec['w']
+    page_h = output_spec['h']
+    
+    for i in range(1, num_pages + 1):
+        page_svg = intermediate_dir / f"page_{i:02d}.svg"
+        logging.info(f"Creating page SVG: {page_svg}")
+        with page_svg.open("w", encoding="utf-8") as f:
+            f.write('<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n')
+            f.write(f'<svg width="{page_w}mm" height="{page_h}mm" viewBox="0 0 {page_w} {page_h}" '
+                    'version="1.1" xmlns="http://www.w3.org/2000/svg" '
+                    'xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n')
+            
+            for j in range(1, slots_per_page + 1):
+                slot_w = slot['w']
+                slot_h = slot['h']
+                x = ((j - 1) % repeat['x']) * slot_w + slot['x']
+                y = ((j - 1) // repeat['x']) * slot_h + slot['y']
+                n = slots_per_page * (i - 1) + j
+                if n > total:
                     break
+                sign_svg = intermediate_dir / f"sign_{n:04d}.svg"
+                f.write(f'<g transform="translate({x},{y})">\n')
+                with sign_svg.open("r", encoding="utf-8") as infile:
+                    for line_num, line in enumerate(infile):
+                        if line_num == 0:
+                            continue  # skip XML declaration
+                        line = line.replace('<svg', '<g').replace('</svg>', '</g>')
+                        for k, v in slot.get('gsub', {}).items():
+                            line = line.replace(k, v)
+                        f.write(line)
+                f.write('</g>\n')
+            f.write('</svg>\n')
+        output_svg_files.append(page_svg)
+        
+        page_pdf = intermediate_dir / f"page_{i:02d}.pdf"
+        logging.info(f"Exporting page PDF: {page_pdf}")
+        cmd = f'inkscape "{page_svg}" --export-plain-svg --export-text-to-path --export-filename="{page_pdf}"'
+        run_cmd(cmd)
+        output_pdf_files.append(page_pdf)
+    
+    return output_svg_files, output_pdf_files
 
-                # calculate the position
-                slot_w = slot_info["w"]
-                slot_h = slot_info["h"]
-                x_count = (slot_index - 1) % repeat["x"]
-                y_count = (slot_index - 1) // repeat["x"]
-                x_pos = slot_info["x"] + x_count * slot_w
-                y_pos = slot_info["y"] + y_count * slot_h
+def create_mask_svg(spec, intermediate_dir: Path, base_dir: Path) -> Path:
+    """Create a mask SVG file based on the provided mask template and export it to PDF."""
+    output_spec = spec['output']
+    slot = output_spec['slot']
+    repeat = slot['repeat']
+    slots_per_page = repeat['x'] * repeat['y']
+    page_w = output_spec['w']
+    page_h = output_spec['h']
+    
+    input_spec = spec['input']
+    mask_file = Path(input_spec['mask'])
+    if not mask_file.is_absolute():
+        mask_file = base_dir / mask_file
 
-                # read the sign_Xxxx.svg
-                sign_filename = f"sign_{sign_num:04d}.svg"
-                sign_path = os.path.join(intermediate_dir, sign_filename)
-
-                pf.write(f'<g transform="translate({x_pos},{y_pos})">\n')
-
-                with open(sign_path, "r", encoding="utf-8") as sp:
-                    for line_idx, line_content in enumerate(sp):
-                        # skip the first line if it's the XML decl
-                        if line_idx == 0 and line_content.strip().startswith('<?xml'):
-                            continue
-                        # Convert <svg to <g, etc.
-                        line_content = line_content.replace("<svg", "<g")
-                        line_content = line_content.replace("</svg>", "</g>")
-                        # Apply gsubs
-                        for k, v in gsubs.items():
-                            line_content = line_content.replace(k, v)
-                        pf.write(line_content)
-
-                pf.write("</g>\n")
-
-            pf.write("</svg>\n")
-
-        # Export page_XX.svg to PDF with Inkscape
-        page_pdf = f"page_{page_num:02d}.pdf"
-        page_pdf_path = os.path.join(intermediate_dir, page_pdf)
-
-        print(f"Exporting page PDF: {page_pdf_path}")
-        subprocess.run([
-            "inkscape",
-            page_svg_path,
-            "--export-plain-svg",
-            "--export-text-to-path",
-            f"--export-filename={page_pdf_path}"
-        ], check=True)
-
-        output_pdf_files.append(page_pdf_path)
-
-    # 6) Create the mask SVG
-    mask_svg_path = os.path.join(intermediate_dir, "mask.svg")
-    print(f"Creating mask SVG: {mask_svg_path}")
-    with open(mask_svg_path, "w", encoding="utf-8") as mf:
-        w = output_spec["w"]
-        h = output_spec["h"]
-        mf.write(
-            f'''<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg width="{w}mm" height="{h}mm" viewBox="0 0 {w} {h}" version="1.1"
-     xmlns="http://www.w3.org/2000/svg"
-     xmlns:svg="http://www.w3.org/2000/svg"
-     xmlns:xlink="http://www.w3.org/1999/xlink">
-'''
-        )
-        for slot_index in range(1, slots_per_page + 1):
-            slot_w = slot_info["w"]
-            slot_h = slot_info["h"]
-            x_count = (slot_index - 1) % repeat["x"]
-            y_count = (slot_index - 1) // repeat["x"]
-            x_pos = slot_info["x"] + x_count * slot_w
-            y_pos = slot_info["y"] + y_count * slot_h
-
-            mf.write(f'<g transform="translate({x_pos},{y_pos})">\n')
-            with open(mask_svg, "r", encoding="utf-8") as mk:
-                for line_idx, line_content in enumerate(mk):
-                    if line_idx == 0 and line_content.strip().startswith('<?xml'):
+    mask_svg = intermediate_dir / "mask.svg"
+    logging.info(f"Creating mask SVG: {mask_svg}")
+    with mask_svg.open("w", encoding="utf-8") as f:
+        f.write('<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n')
+        f.write(f'<svg width="{page_w}mm" height="{page_h}mm" viewBox="0 0 {page_w} {page_h}" '
+                'version="1.1" xmlns="http://www.w3.org/2000/svg" '
+                'xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n')
+        for j in range(1, slots_per_page + 1):
+            slot_w = slot['w']
+            slot_h = slot['h']
+            x = ((j - 1) % repeat['x']) * slot_w + slot['x']
+            y = ((j - 1) // repeat['x']) * slot_h + slot['y']
+            f.write(f'<g transform="translate({x},{y})">\n')
+            with mask_file.open("r", encoding="utf-8") as infile:
+                for line_num, line in enumerate(infile):
+                    if line_num == 0:
                         continue
-                    line_content = line_content.replace("<svg", "<g")
-                    line_content = line_content.replace("</svg>", "</g>")
-                    for k, v in gsubs.items():
-                        line_content = line_content.replace(k, v)
-                    mf.write(line_content)
-            mf.write("</g>\n")
+                    line = line.replace('<svg', '<g').replace('</svg>', '</g>')
+                    for k, v in slot.get('gsub', {}).items():
+                        line = line.replace(k, v)
+                    f.write(line)
+            f.write('</g>\n')
+        f.write('</svg>\n')
+    mask_pdf = intermediate_dir / "mask.pdf"
+    logging.info(f"Exporting mask PDF: {mask_pdf}")
+    cmd = f'inkscape "{mask_svg}" --export-plain-svg --export-text-to-path --export-filename="{mask_pdf}"'
+    run_cmd(cmd)
+    return mask_pdf
 
-        mf.write("</svg>\n")
+def zip_svgs(intermediate_dir: Path, output_zip: Path):
+    """Zip all SVG files from the intermediate directory."""
+    logging.info(f"Creating zip for SVG files: {output_zip}")
+    with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for svg_file in intermediate_dir.glob("*.svg"):
+            zipf.write(svg_file, arcname=svg_file.name)
 
-    # 7) Export mask.svg to mask.pdf
-    mask_pdf_path = os.path.join(intermediate_dir, "mask.pdf")
-    print(f"Exporting mask PDF: {mask_pdf_path}")
-    subprocess.run([
-        "inkscape",
-        mask_svg_path,
-        "--export-plain-svg",
-        "--export-text-to-path",
-        f"--export-filename={mask_pdf_path}"
-    ], check=True)
-
-    # 8) Zip all SVG files
+def main():
+    parser = argparse.ArgumentParser(description="Process a YAML spec to generate SVGs and PDFs.")
+    parser.add_argument("yaml_file", help="Path to the YAML spec file")
+    args = parser.parse_args()
+    
+    base_dir = Path(args.yaml_file).resolve().parent
+    spec_path = Path(args.yaml_file)
+    logging.info(f"Reading spec: {spec_path}")
+    with spec_path.open("r", encoding="utf-8") as f:
+        spec = yaml.safe_load(f)
+    
+    output_spec = spec['output']
+    output_dir = base_dir / output_spec['dir']
+    intermediate_dir = output_dir / "intermediate"
+    if intermediate_dir.exists():
+        shutil.rmtree(intermediate_dir)
+    intermediate_dir.mkdir(parents=True, exist_ok=True)
+    
+    total = process_csv_and_create_svgs(spec, base_dir, intermediate_dir)
+    _, output_pdf_files = create_page_svgs(spec, intermediate_dir, total)
+    mask_pdf = create_mask_svg(spec, intermediate_dir, base_dir)
+    
     timestamp = time.strftime('%Y%m%d%H%M%S')
-    zip_file = f"{prefix}{timestamp}.zip"
-    zip_cmd = f"zip ../{zip_file} *.svg"
-
-    print(f"Creating zip for all SVG files: {zip_file}")
-    # use shell command to change dir to intermediate, zip all .svg
-    subprocess.run(zip_cmd, shell=True, cwd=intermediate_dir, check=True)
-    # subprocess.run(zip_cmd, cwd=intermediate_dir, check=True)
-
-    # 9) Merge PDFs with pdfunite
-    merged_pdf_file = os.path.join(output_dir, f"{prefix}{timestamp}_RGB.pdf")
-    print(f"Merging all PDF files: {merged_pdf_file}")
-    # pdfunite <page1> <page2> ... <mask> <out>
-    pdfunite_cmd = ["pdfunite"] + output_pdf_files + [mask_pdf_path, merged_pdf_file]
-    subprocess.run(pdfunite_cmd, check=True)
-
-    # 10) Convert to CMYK with Ghostscript
-    merged_cmyk_pdf_file = os.path.join(output_dir, f"{prefix}{timestamp}_CMYK.pdf")
-    print(f"Converting to CMYK: {merged_cmyk_pdf_file}")
-    gs_cmd = [
-        "gs",
-        "-dSAFER",
-        "-dBATCH",
-        "-dNOPAUSE",
-        "-dNOCACHE",
-        "-sDEVICE=pdfwrite",
-        "-dAutoRotatePages=/None",
-        "-sColorConversionStrategy=CMYK",
-        "-dProcessColorModel=/DeviceCMYK",
-        f"-sOutputFile={merged_cmyk_pdf_file}",
-        merged_pdf_file
-    ]
-    subprocess.run(gs_cmd, check=True)
-
-    print("All done.")
+    svg_zip = output_dir / f"{output_spec['prefix']}{timestamp}.zip"
+    zip_svgs(intermediate_dir, svg_zip)
+    
+    merged_rgb = output_dir / f"{output_spec['prefix']}{timestamp}_RGB.pdf"
+    pdf_files = output_pdf_files + [mask_pdf]
+    logging.info(f"Merging PDFs into: {merged_rgb}")
+    merge_pdfs(pdf_files, merged_rgb)
+    
+    merged_cmyk = output_dir / f"{output_spec['prefix']}{timestamp}_CMYK.pdf"
+    logging.info(f"Converting merged PDF to CMYK: {merged_cmyk}")
+    convert_to_cmyk(merged_rgb, merged_cmyk)
+    
+    logging.info("Processing completed successfully.")
 
 if __name__ == "__main__":
     main()

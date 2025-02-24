@@ -36,7 +36,7 @@ total = 0
 sh "rm -rf #{output_dir}/intermediate/"
 
 puts "Reading data CSV: #{data}"
-CSV.foreach(data).with_index do |row, row_num|
+CSV.foreach(data, encoding: "bom|utf-8").with_index do |row, row_num|
   if row_num == 0
     row.each_with_index do |col, col_num|
       cols.push(col)

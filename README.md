@@ -17,6 +17,12 @@
   - pdfunite
   - gs
 
+## Cross-platform note
+
+This project should work cross-platform (macOS / Linux / Windows).
+
+- If `make` / `Makefile` isn’t available on your platform (common on Windows), use the **Docker CLI** commands below or the **GUI runner** (`run_tsg_docker.py`).
+
 ## 使用方式 (以白姑大山路標為例)
 
 白姑大山路標分為 **編碼路標** 及 **空白路標** 兩部份，其設定檔位置如下：
@@ -90,6 +96,12 @@ $ docker build -t rudychung/tsg docker
  => => unpacking to docker.io/rudychung/tsg:latest      4.5s
 ```
 
+Or use the Makefile shortcut:
+
+```shell
+$ make docker/build
+```
+
 To run the docker image with a GUI, run the following command:
 
 ```shell
@@ -104,6 +116,36 @@ $ docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM
 ## ...
 $
 ```
+
+Or use the Makefile shortcut (default trail is `白姑大山`):
+
+```shell
+$ make docker/generate
+```
+
+To select another trail directory:
+
+```shell
+$ make docker/generate 白姑大山
+```
+
+## Makefile shortcuts
+
+This repo’s `Makefile` supports running against different trail directories via a positional argument.
+
+- Generate both milestone + blank PDFs locally (Ruby):
+
+```shell
+$ make generate 白姑大山
+```
+
+- Clean outputs for a trail:
+
+```shell
+$ make clean 白姑大山
+```
+
+Safety note: `TRAIL` is validated to ensure it resolves under the repo root (`$(CURDIR)`), to avoid accidental deletion outside the workspace.
 
 To run the docker image with a shell, run the following command:
 

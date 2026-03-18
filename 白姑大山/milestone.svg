@@ -269,7 +269,7 @@
      inkscape:groupmode="layer"
      id="layer3"
      inkscape:label="Layer 3"
-     style="display:inline">
+     style="display:none">
     <path
        d="M 10.990544,100.13456 C 8.2875607,100.13421 6.0886969,97.934991 6.0883441,95.23236 L 6.0886969,5.0373149 c 0,-2.7029833 2.1988638,-4.90219992 4.9018471,-4.90219992 L 101.18629,0.1347622 c 2.70264,0 4.90185,2.1995694 4.90185,4.9025527 V 95.23236 c 0,2.702983 -2.19921,4.9022 -4.90185,4.9022 z"
        style="display:inline;fill:none;stroke:#000000;stroke-width:0.176;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:22.926;stroke-dasharray:none;stroke-opacity:1"

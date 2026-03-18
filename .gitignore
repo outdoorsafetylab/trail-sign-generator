@@ -1,0 +1,6 @@
+.DS_Store
+/build/
+/dist/
+/_internal/
+run_tsg_docker
+run_tsg_docker.spec

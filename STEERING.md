@@ -120,8 +120,8 @@ For maintainers, `make generate <trailDir> <LINE_CODE...>`, `make docker/generat
 
 ## 7. Adding a new trail or variant
 
-1. Add a new directory (e.g. `新路線/`).
-2. Copy and adapt a spec YAML, CSV, template SVG, and mask SVG from 白姑大山 or another trail.
+1. Add a new directory (e.g. `新路線/`), and give it a `.gitignore` containing `/output`. The root `.gitignore` does not cover trail outputs, and every run writes a fresh timestamped PDF and zip — without this the directory accumulates generated artifacts indefinitely.
+2. Copy and adapt a spec YAML, CSV, template SVG, and mask SVG from 白姑大山 or another trail. Name the specs `<LINE_CODE>_milestone.yaml` and `<LINE_CODE>_blank.yaml` (§5) — `make generate` derives the filenames from the line code, so a spec named anything else can only be run by passing its path to the generator directly. The line code is just a filename prefix; use the route's official sign code where it has one (`SM400`), or a readable stand-in where it does not (`mt_ayu`).
 3. Run the generator with the new spec path; outputs go to that trail’s `output/` (or whatever `output.dir` is set to).
 
 No code changes are required if the spec and assets conform to the YAML contract above.

@@ -141,10 +141,10 @@ Run `make` with no arguments to print the available targets.
 $ make generate 白姑大山 SM400
 ```
 
-- Generate several lines of the same trail in one go:
+- Generate several lines of the same trail in one go, by listing their codes. Each line's milestone and blank specs are run in turn, and the batch stops at the first failure:
 
 ```shell
-$ make generate 玉山後四峰 YM150 YM151 YM160 YM170
+$ make generate <trailDir> <CODE_A> <CODE_B>
 ```
 
 - Clean outputs for a trail:

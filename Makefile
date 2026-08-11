@@ -17,8 +17,8 @@ REAL_TARGETS := help clean generate docker/build docker/generate
 
 # Allow: `make <target> <trailDir> [<LINE_CODE>...]` for targets that use TRAIL.
 # In GNU make, extra words are treated as goals, so we capture the 2nd word as
-# TRAIL, any remaining words as LINE_CODES (some trails have several lines,
-# e.g. `make generate 玉山後四峰 YM150 YM151`), and add no-op rules for them.
+# TRAIL, any remaining words as LINE_CODES (a trail may have several lines, and
+# each is generated in turn), and add no-op rules for them.
 ifneq (,$(filter $(TRAIL_TARGETS),$(MAKECMDGOALS)))
   POSITIONAL := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 
@@ -70,8 +70,10 @@ help:
 	@echo ""
 	@echo "Examples:"
 	@echo "  make generate 白姑大山 SM400"
-	@echo "  make generate 玉山後四峰 YM150 YM151 YM160 YM170"
 	@echo "  make clean 白姑大山"
+	@echo ""
+	@echo "Several lines of one trail can be generated in a single run:"
+	@echo "  make generate <trailDir> <CODE_A> <CODE_B>"
 
 clean:
 	rm -rf $(TRAIL)/output

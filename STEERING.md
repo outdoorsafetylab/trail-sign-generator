@@ -113,7 +113,7 @@ Specs are named `<LINE_CODE>_milestone.yaml` and `<LINE_CODE>_blank.yaml`, so on
 | **Docker (CLI)** | `docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM rudychung/tsg <spec.yaml>` — spec path is relative to mounted dir. |
 | **Docker (GUI)** | `./run_tsg_docker.py` or `python3 run_tsg_docker.py`; choose directory and YAML in the GUI. |
 
-The [Makefile](Makefile) takes the trail directory and one or more line codes positionally, and runs the milestone + blank specs of each line as a single batch — e.g. `make generate 白姑大山 SM400`, or `make generate 玉山後四峰 YM150 YM151` for several lines at once.
+The [Makefile](Makefile) takes the trail directory and one or more line codes positionally, and runs the milestone + blank specs of each line as a single batch — e.g. `make generate 白姑大山 SM400`, or `make generate <trailDir> <CODE_A> <CODE_B>` for several lines at once. A bare `make` prints the available targets.
 For maintainers, `make generate <trailDir> <LINE_CODE...>`, `make docker/generate <trailDir> <LINE_CODE...>` and `make clean <trailDir>` are available; the trail directory is validated to stay under the repo root.
 
 ---

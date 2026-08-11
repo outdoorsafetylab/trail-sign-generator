@@ -32,6 +32,8 @@ This project should work cross-platform (macOS / Linux / Windows).
 
 命名慣例為 `<路線代碼>_milestone.yaml` 及 `<路線代碼>_blank.yaml`，資料檔則為 `<路線代碼>.csv`（空白路標共用 `blank.csv`）。
 
+其中**編碼路標為必需，空白路標為選配**——並非每條路線都會製作空白路標。若 `<路線代碼>_blank.yaml` 不存在，`make generate` 只會產生編碼路標並印出一行提示。
+
 在命令列下執行以下指令即可產生路標SVG檔案：
 
 ```shell
@@ -159,7 +161,6 @@ To run the docker image with a shell, run the following command:
 
 ```shell
 docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM --entrypoint /bin/bash rudychung/tsg --login
-builder@3b3c534456eb:~$ cd workdir/
 builder@3b3c534456eb:~/workdir$ ruby generate.rb 白姑大山/SM400_milestone.yaml
 Reading spec: 
 rm -rf 白姑大山/output/intermediate/

@@ -100,7 +100,7 @@ Both generators expect the following schema. All paths are relative to the direc
 | `output.slot.repeat.num` | Optional: max number of signs to generate |
 | `output.slot.gsub` | Optional: key→value string replacements applied to slot SVGs |
 
-Specs are named `<LINE_CODE>_milestone.yaml` and `<LINE_CODE>_blank.yaml`, so one trail directory can hold several lines side by side. Examples: [白姑大山/SM400_milestone.yaml](白姑大山/SM400_milestone.yaml), [白姑大山/SM400_blank.yaml](白姑大山/SM400_blank.yaml). Full usage notes are in [README.md](README.md).
+Specs are named `<LINE_CODE>_milestone.yaml` and `<LINE_CODE>_blank.yaml`, so one trail directory can hold several lines side by side. The milestone spec is required; the blank one is optional, as not every line orders blank signs. Examples: [白姑大山/SM400_milestone.yaml](白姑大山/SM400_milestone.yaml), [白姑大山/SM400_blank.yaml](白姑大山/SM400_blank.yaml). Full usage notes are in [README.md](README.md).
 
 ---
 

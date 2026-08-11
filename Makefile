@@ -44,7 +44,7 @@ ifneq (,$(filter $(TRAIL_TARGETS),$(MAKECMDGOALS)))
   GENERATE_GOALS := $(filter generate docker/generate,$(MAKECMDGOALS))
   ifneq (,$(GENERATE_GOALS))
     ifeq (,$(LINE_CODES))
-      $(error Usage: make $(GENERATE_GOALS) <trailDir> <LINE_CODE...> (example: make generate 雪山西稜 SM300))
+      $(error Usage: make $(GENERATE_GOALS) <trailDir> <LINE_CODE...> (example: make generate 白姑大山 SM400))
     endif
   endif
 endif
@@ -78,13 +78,20 @@ help:
 clean:
 	rm -rf $(TRAIL)/output
 
+# The milestone spec is required; the blank one is optional, because not every
+# line orders blank signs (several trails ship a milestone spec only).
+#
 # `|| exit 1` on every run: the loop body is one shell command list, so without
 # it a failed line would be followed by the remaining ones and the recipe would
 # still exit 0 — handing back a silently incomplete batch to send to the printer.
 generate:
 	@for code in $(LINE_CODES); do \
 		ruby generate.rb $(TRAIL)/$${code}_milestone.yaml || exit 1; \
-		ruby generate.rb $(TRAIL)/$${code}_blank.yaml || exit 1; \
+		if [ -f $(TRAIL)/$${code}_blank.yaml ]; then \
+			ruby generate.rb $(TRAIL)/$${code}_blank.yaml || exit 1; \
+		else \
+			echo "$(TRAIL)/$${code}_blank.yaml not found — no blank signs for $${code}"; \
+		fi; \
 	done
 
 docker/generate: docker/build
@@ -95,12 +102,16 @@ docker/generate: docker/build
 			-e TERM=$$TERM \
 			rudychung/tsg \
 			$(TRAIL)/$${code}_milestone.yaml || exit 1; \
-		docker run -it --rm \
-			--user builder \
-			-v $(CURDIR):/home/builder/workdir \
-			-e TERM=$$TERM \
-			rudychung/tsg \
-			$(TRAIL)/$${code}_blank.yaml || exit 1; \
+		if [ -f $(TRAIL)/$${code}_blank.yaml ]; then \
+			docker run -it --rm \
+				--user builder \
+				-v $(CURDIR):/home/builder/workdir \
+				-e TERM=$$TERM \
+				rudychung/tsg \
+				$(TRAIL)/$${code}_blank.yaml || exit 1; \
+		else \
+			echo "$(TRAIL)/$${code}_blank.yaml not found — no blank signs for $${code}"; \
+		fi; \
 	done
 
 docker/build:

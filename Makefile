@@ -81,16 +81,24 @@ clean:
 # The milestone spec is required; the blank one is optional, because not every
 # line orders blank signs (several trails ship a milestone spec only).
 #
+# Only a genuine absence counts as "no blank signs". A path that exists but is
+# not a regular file — a directory, a broken symlink — is a malformed checkout,
+# and skipping it would hand back an incomplete batch marked successful, which
+# is the failure mode the `|| exit 1` below exists to prevent.
+#
 # `|| exit 1` on every run: the loop body is one shell command list, so without
 # it a failed line would be followed by the remaining ones and the recipe would
 # still exit 0 — handing back a silently incomplete batch to send to the printer.
 generate:
 	@for code in $(LINE_CODES); do \
 		ruby generate.rb $(TRAIL)/$${code}_milestone.yaml || exit 1; \
-		if [ -f $(TRAIL)/$${code}_blank.yaml ]; then \
-			ruby generate.rb $(TRAIL)/$${code}_blank.yaml || exit 1; \
+		blank=$(TRAIL)/$${code}_blank.yaml; \
+		if [ -f "$$blank" ]; then \
+			ruby generate.rb "$$blank" || exit 1; \
+		elif [ -e "$$blank" ] || [ -L "$$blank" ]; then \
+			echo "$$blank exists but is not a regular file" >&2; exit 1; \
 		else \
-			echo "$(TRAIL)/$${code}_blank.yaml not found — no blank signs for $${code}"; \
+			echo "$$blank not found — no blank signs for $${code}"; \
 		fi; \
 	done
 
@@ -102,15 +110,18 @@ docker/generate: docker/build
 			-e TERM=$$TERM \
 			rudychung/tsg \
 			$(TRAIL)/$${code}_milestone.yaml || exit 1; \
-		if [ -f $(TRAIL)/$${code}_blank.yaml ]; then \
+		blank=$(TRAIL)/$${code}_blank.yaml; \
+		if [ -f "$$blank" ]; then \
 			docker run -it --rm \
 				--user builder \
 				-v $(CURDIR):/home/builder/workdir \
 				-e TERM=$$TERM \
 				rudychung/tsg \
-				$(TRAIL)/$${code}_blank.yaml || exit 1; \
+				"$$blank" || exit 1; \
+		elif [ -e "$$blank" ] || [ -L "$$blank" ]; then \
+			echo "$$blank exists but is not a regular file" >&2; exit 1; \
 		else \
-			echo "$(TRAIL)/$${code}_blank.yaml not found — no blank signs for $${code}"; \
+			echo "$$blank not found — no blank signs for $${code}"; \
 		fi; \
 	done
 

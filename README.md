@@ -133,6 +133,8 @@ This repo’s `Makefile` takes the trail directory and one or more line codes as
 make <target> <trailDir> <LINE_CODE...>
 ```
 
+Run `make` with no arguments to print the available targets.
+
 - Generate both milestone + blank PDFs locally (Ruby):
 
 ```shell

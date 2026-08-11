@@ -8,7 +8,12 @@ endif
 # Targets that take positional arguments, and every real target a positional
 # argument must not be confused with.
 TRAIL_TARGETS := clean generate docker/generate
-REAL_TARGETS := clean generate docker/build docker/generate
+REAL_TARGETS := help clean generate docker/build docker/generate
+
+# `clean` is the first target in this file and was therefore make's default
+# goal, so a bare `make` silently deleted 白姑大山/output — a whole batch of
+# print-ready PDFs, gone to a typo. Print usage instead.
+.DEFAULT_GOAL := help
 
 # Allow: `make <target> <trailDir> [<LINE_CODE>...]` for targets that use TRAIL.
 # In GNU make, extra words are treated as goals, so we capture the 2nd word as
@@ -54,6 +59,19 @@ ifneq (,$(filter $(TRAIL_TARGETS),$(MAKECMDGOALS)))
     $(error TRAIL must be under $(CURDIR_ABS). Got TRAIL='$(TRAIL)' (resolved to '$(TRAIL_ABS)'))
   endif
 endif
+
+help:
+	@echo "Usage: make <target> <trailDir> [<LINE_CODE>...]"
+	@echo ""
+	@echo "  generate <trailDir> <LINE_CODE...>         generate PDFs locally (Ruby)"
+	@echo "  docker/generate <trailDir> <LINE_CODE...>  the same, inside the docker image"
+	@echo "  docker/build                               build the docker image"
+	@echo "  clean <trailDir>                           remove <trailDir>/output"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make generate 白姑大山 SM400"
+	@echo "  make generate 玉山後四峰 YM150 YM151 YM160 YM170"
+	@echo "  make clean 白姑大山"
 
 clean:
 	rm -rf $(TRAIL)/output

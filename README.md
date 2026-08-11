@@ -30,7 +30,9 @@ This project should work cross-platform (macOS / Linux / Windows).
 - 編碼路標: `白姑大山/SM400_milestone.yaml`
 - 空白路標: `白姑大山/SM400_blank.yaml`
 
-命名慣例為 `<路線代碼>_milestone.yaml` 及 `<路線代碼>_blank.yaml`，資料檔則為 `<路線代碼>.csv`（空白路標共用 `blank.csv`）。
+命名慣例為 `<路線代碼>_milestone.yaml` 及 `<路線代碼>_blank.yaml`，資料檔則為 `<路線代碼>.csv`（空白路標共用 `blank.csv`）。路線代碼只是檔名前綴：有配發正式路標編碼的路線就用該編碼（如 `SM400`），沒有的則取一個好認的代稱（如阿玉山主線用 `mt_ayu`）。
+
+另外請在步道目錄下放一個內容為 `/output` 的 `.gitignore`。根目錄的 `.gitignore` 並未涵蓋各步道的產出，而每次執行都會產生一份帶時間戳的 PDF 與 zip，沒有這個檔案的話產出物會不斷累積進版控。
 
 其中**編碼路標為必需，空白路標為選配**——並非每條路線都會製作空白路標。若 `<路線代碼>_blank.yaml` 不存在，`make generate` 只會產生編碼路標並印出一行提示。
 

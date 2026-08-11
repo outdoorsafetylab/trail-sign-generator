@@ -158,7 +158,7 @@ To run the docker image with a shell, run the following command:
 ```shell
 docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM --entrypoint /bin/bash rudychung/tsg --login
 builder@3b3c534456eb:~$ cd workdir/
-builder@3b3c534456eb:~/workdir$ ruby generate.rb 白姑大山/SM400_milestone.yaml 
+builder@3b3c534456eb:~/workdir$ ruby generate.rb 白姑大山/SM400_milestone.yaml
 Reading spec: 
 rm -rf 白姑大山/output/intermediate/
 Reading data CSV: 白姑大山/SM400.csv

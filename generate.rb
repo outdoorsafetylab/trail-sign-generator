@@ -16,7 +16,7 @@ end
 puts "Reading spec: #{}"
 spec_file = ARGV[0]
 base_dir = File.dirname(spec_file)
-spec = YAML.load(File.read(spec_file))
+spec = YAML.load_file(spec_file)
 input = spec['input']
 data = File.join(base_dir, input['data'])
 tmpl = File.join(base_dir, input['template'])
@@ -36,7 +36,7 @@ total = 0
 sh "rm -rf #{output_dir}/intermediate/"
 
 puts "Reading data CSV: #{data}"
-CSV.foreach(data).with_index do |row, row_num|
+CSV.foreach(data, encoding: 'bom|utf-8').with_index do |row, row_num|
   if row_num == 0
     row.each_with_index do |col, col_num|
       cols.push(col)

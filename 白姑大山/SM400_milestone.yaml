@@ -1,6 +1,6 @@
 input:
-  template: milestone.svg
-  data: milestone.csv
+  template: SM400_milestone.svg
+  data: SM400.csv
   mask: mask.svg
 output:
   dir: output

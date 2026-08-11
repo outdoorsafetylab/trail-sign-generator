@@ -18,7 +18,7 @@ This document is the single source of truth for the project’s purpose, archite
 
 **Inputs (per run):**
 
-- One YAML spec (e.g. `白姑大山/milestone.yaml`) defining paths and layout
+- One YAML spec (e.g. `白姑大山/SM400_milestone.yaml`) defining paths and layout
 - CSV whose headers are placeholder names in the template
 - Template SVG and mask SVG (paths in YAML)
 
@@ -78,7 +78,7 @@ See [docker/Dockerfile](docker/Dockerfile) and [README.md](README.md) for exact 
 | Canonical generator | [generate.rb](generate.rb) — used by Docker and Makefile; reference implementation |
 | Alternative generator | [generate.py](generate.py) — same behavior for environments without Ruby; port of generate.rb |
 | Docker launcher (GUI) | [run_tsg_docker.py](run_tsg_docker.py) — selects PWD and YAML, runs `docker run ... rudychung/tsg <yaml>` |
-| Batch run | [Makefile](Makefile) — runs both milestone and blank YAMLs for 白姑大山 |
+| Batch run | [Makefile](Makefile) — runs the milestone and blank YAMLs for the given trail and line codes |
 
 ---
 
@@ -100,7 +100,7 @@ Both generators expect the following schema. All paths are relative to the direc
 | `output.slot.repeat.num` | Optional: max number of signs to generate |
 | `output.slot.gsub` | Optional: key→value string replacements applied to slot SVGs |
 
-Examples: [白姑大山/milestone.yaml](白姑大山/milestone.yaml), [白姑大山/blank.yaml](白姑大山/blank.yaml). Full usage notes are in [README.md](README.md).
+Specs are named `<LINE_CODE>_milestone.yaml` and `<LINE_CODE>_blank.yaml`, so one trail directory can hold several lines side by side. The milestone spec is required; the blank one is optional, as not every line orders blank signs. Examples: [白姑大山/SM400_milestone.yaml](白姑大山/SM400_milestone.yaml), [白姑大山/SM400_blank.yaml](白姑大山/SM400_blank.yaml). Full usage notes are in [README.md](README.md).
 
 ---
 
@@ -113,8 +113,8 @@ Examples: [白姑大山/milestone.yaml](白姑大山/milestone.yaml), [白姑大
 | **Docker (CLI)** | `docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM rudychung/tsg <spec.yaml>` — spec path is relative to mounted dir. |
 | **Docker (GUI)** | `./run_tsg_docker.py` or `python3 run_tsg_docker.py`; choose directory and YAML in the GUI. |
 
-The [Makefile](Makefile) runs both 白姑大山 configs (milestone + blank) as a single batch.
-For maintainers, `make generate <trailDir>` and `make clean <trailDir>` are available; the trail directory is validated to stay under the repo root.
+The [Makefile](Makefile) takes the trail directory and one or more line codes positionally, and runs the milestone + blank specs of each line as a single batch — e.g. `make generate 白姑大山 SM400`, or `make generate <trailDir> <CODE_A> <CODE_B>` for several lines at once. A bare `make` prints the available targets.
+For maintainers, `make generate <trailDir> <LINE_CODE...>`, `make docker/generate <trailDir> <LINE_CODE...>` and `make clean <trailDir>` are available; the trail directory is validated to stay under the repo root.
 
 ---
 

@@ -1,5 +1,5 @@
 input:
-  template: blank.svg
+  template: SM400_blank.svg
   data: blank.csv
   mask: mask.svg
 output:

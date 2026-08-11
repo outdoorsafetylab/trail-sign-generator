@@ -25,10 +25,14 @@ This project should work cross-platform (macOS / Linux / Windows).
 
 ## 使用方式 (以白姑大山路標為例)
 
-白姑大山路標分為 **編碼路標** 及 **空白路標** 兩部份，其設定檔位置如下：
+一條步道底下可能有多條路線，因此設定檔以**路線代碼**為前綴命名。白姑大山只有主線一條，代碼為 `SM400`。每條路線各有 **編碼路標** 及 **空白路標** 兩部份，其設定檔位置如下：
 
-- 編碼路標: `白姑大山/milestone.yaml`
-- 空白路標: `白姑大山/blank.yaml`
+- 編碼路標: `白姑大山/SM400_milestone.yaml`
+- 空白路標: `白姑大山/SM400_blank.yaml`
+
+命名慣例為 `<路線代碼>_milestone.yaml` 及 `<路線代碼>_blank.yaml`，資料檔則為 `<路線代碼>.csv`（空白路標共用 `blank.csv`）。
+
+其中**編碼路標為必需，空白路標為選配**——並非每條路線都會製作空白路標。若 `<路線代碼>_blank.yaml` 不存在，`make generate` 只會產生編碼路標並印出一行提示。
 
 在命令列下執行以下指令即可產生路標SVG檔案：
 
@@ -112,31 +116,37 @@ $
 To run the docker image, run the following command:
 
 ```shell
-$ docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM rudychung/tsg 白姑大山/milestone.yaml
+$ docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM rudychung/tsg 白姑大山/SM400_milestone.yaml
 ## ...
 $
 ```
 
-Or use the Makefile shortcut (default trail is `白姑大山`):
+Or use the Makefile shortcut:
 
 ```shell
-$ make docker/generate
-```
-
-To select another trail directory:
-
-```shell
-$ make docker/generate 白姑大山
+$ make docker/generate 白姑大山 SM400
 ```
 
 ## Makefile shortcuts
 
-This repo’s `Makefile` supports running against different trail directories via a positional argument.
+This repo’s `Makefile` takes the trail directory and one or more line codes as positional arguments:
+
+```
+make <target> <trailDir> <LINE_CODE...>
+```
+
+Run `make` with no arguments to print the available targets.
 
 - Generate both milestone + blank PDFs locally (Ruby):
 
 ```shell
-$ make generate 白姑大山
+$ make generate 白姑大山 SM400
+```
+
+- Generate several lines of the same trail in one go, by listing their codes. Each line's milestone and blank specs are run in turn, and the batch stops at the first failure:
+
+```shell
+$ make generate <trailDir> <CODE_A> <CODE_B>
 ```
 
 - Clean outputs for a trail:
@@ -151,11 +161,10 @@ To run the docker image with a shell, run the following command:
 
 ```shell
 docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM --entrypoint /bin/bash rudychung/tsg --login
-builder@3b3c534456eb:~$ cd workdir/
-builder@3b3c534456eb:~/workdir$ ruby generate.rb 白姑大山/milestone.yaml 
+builder@3b3c534456eb:~/workdir$ ruby generate.rb 白姑大山/SM400_milestone.yaml
 Reading spec: 
 rm -rf 白姑大山/output/intermediate/
-Reading data CSV: 白姑大山/milestone.csv
+Reading data CSV: 白姑大山/SM400.csv
 Replacing with headers: ["里程(公里)", "路線", "總里程", "里程", "地標名稱", "分段第一行", "分段第二行", "左下角備註", "右下角備註"]
 Creating intermediate SVG: 白姑大山/output/intermediate/sign_0001.svg
 ...

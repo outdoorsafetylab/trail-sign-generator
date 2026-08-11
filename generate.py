@@ -53,7 +53,10 @@ def main():
     headers = []
     total = 0
 
-    with open(data_csv, "r", encoding="utf-8") as csvfile:
+    # utf-8-sig, not utf-8: CSVs exported from Excel carry a BOM, which would
+    # otherwise stay glued to the first header name and stop that column's
+    # placeholder from being substituted in the template.
+    with open(data_csv, "r", encoding="utf-8-sig") as csvfile:
         reader = csv.reader(csvfile)
         for row_index, row in enumerate(reader):
             if row_index == 0:

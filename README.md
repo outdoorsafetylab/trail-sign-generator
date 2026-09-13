@@ -40,6 +40,7 @@ This project should work cross-platform (macOS / Linux / Windows).
 
 ```shell
 ruby generate.rb <設定檔路徑>
+ruby generate.rb <設定檔路徑> --hide-preview-layers   # 送鋁板：隱藏 preview_layers
 ```
 
 產出之檔案會存放在 `output/` 資料夾之下，中繼檔案會暫存於 `output/intermediate/` 內。產出之檔案主要有三個部份：
@@ -53,8 +54,16 @@ ruby generate.rb <設定檔路徑>
 ```
 input:
   template: 樣版檔 SVG
-  data: 資料檔 CSV
+  data: 資料檔 CSV（也可列多個，表頭須相同，列會依序接續）
   mask: 遮罩檔 SVG (標示要切割反光材質的區域)
+  preview_layers:        # 選填：校對用圖層／繪圖名稱（inkscape:label 或 id）
+    - Layer 3            # 預設仍會印出；加上 --hide-preview-layers 才隱藏
+  hide_when_empty:       # 選填：CSV 欄位空白時自動隱藏的繪圖名稱
+    里程: mileage_bar
+  fill:                  # 選填：依主／支線改底色（預設黃／橙，作用在 background_color）
+    background_color:
+      主線: '#ffff00'
+      支線: '#f58635'
 output:
   dir: 輸出資料夾
   prefix: 輸出檔名前綴字
@@ -78,7 +87,7 @@ output:
 
 ### SVG 樣版檔
 
-樣版檔可使用 Inkscape 編輯並修改，請留意文字大小及文字框位置，以免文字超出範圍。輸出前請隱藏外框及釘孔，以免製具誤差造成的問題。白姑大山路標樣版檔中，外框及釘孔均在其專用圖層中，可直接控制圖層來隱藏或顯示。
+樣版檔可使用 Inkscape 編輯並修改，請留意文字大小及文字框位置，以免文字超出範圍。外框及釘孔請放在專用圖層（例如 `Layer 3`），並把名稱寫進 YAML 的 `preview_layers`；樣版可保持顯示方便對位。一般產製會印出該層，送鋁板時再加 `--hide-preview-layers`（Makefile 用 `HIDE_PREVIEW=1`）。沒有里程的牌子把分數橫線標成 `mileage_bar`，並用 `hide_when_empty` 對應 CSV 欄位，產製時若該欄空白會自動隱藏。
 
 | 輸出用(隱藏外框及釘孔) | 預覽用(顯示外框及釘孔)  |
 | ---  | --- |
@@ -143,6 +152,7 @@ Run `make` with no arguments to print the available targets.
 
 ```shell
 $ make generate 白姑大山 SM400
+$ make generate 雪山西稜 SM300 HIDE_PREVIEW=1
 ```
 
 - Generate several lines of the same trail in one go, by listing their codes. Each line's milestone and blank specs are run in turn, and the batch stops at the first failure:

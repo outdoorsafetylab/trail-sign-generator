@@ -2,6 +2,12 @@ input:
   template: SM300_milestone.svg
   data: SM300.csv
   mask: mask.svg
+  # Layers hidden only when generating with --hide-preview-layers (crop marks / holes).
+  preview_layers:
+    - Layer 3
+  # Drawings hidden automatically when the named CSV column is blank.
+  hide_when_empty:
+    里程: mileage_bar
 output:
   dir: output
   prefix: SM300_主線_編碼路標_

@@ -2,6 +2,8 @@ input:
   template: SM300_blank.svg
   data: blank.csv
   mask: mask.svg
+  preview_layers:
+    - Layer 3
 output:
   dir: output
   prefix: SM300_主線_空白路標_

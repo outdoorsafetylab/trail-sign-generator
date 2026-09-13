@@ -60,6 +60,11 @@ ifneq (,$(filter $(TRAIL_TARGETS),$(MAKECMDGOALS)))
   endif
 endif
 
+GENERATE_FLAGS :=
+ifeq ($(HIDE_PREVIEW),1)
+  GENERATE_FLAGS += --hide-preview-layers
+endif
+
 help:
 	@echo "Usage: make <target> <trailDir> [<LINE_CODE>...]"
 	@echo ""
@@ -70,10 +75,13 @@ help:
 	@echo ""
 	@echo "Examples:"
 	@echo "  make generate 白姑大山 SM400"
+	@echo "  make generate 雪山西稜 SM300 HIDE_PREVIEW=1"
 	@echo "  make clean 白姑大山"
 	@echo ""
 	@echo "Several lines of one trail can be generated in a single run:"
 	@echo "  make generate <trailDir> <CODE_A> <CODE_B>"
+	@echo ""
+	@echo "Optional: HIDE_PREVIEW=1 hides YAML input.preview_layers (crop marks / holes)"
 
 clean:
 	rm -rf $(TRAIL)/output
@@ -91,10 +99,10 @@ clean:
 # still exit 0 — handing back a silently incomplete batch to send to the printer.
 generate:
 	@for code in $(LINE_CODES); do \
-		ruby generate.rb $(TRAIL)/$${code}_milestone.yaml || exit 1; \
+		ruby generate.rb $(TRAIL)/$${code}_milestone.yaml $(GENERATE_FLAGS) || exit 1; \
 		blank=$(TRAIL)/$${code}_blank.yaml; \
 		if [ -f "$$blank" ]; then \
-			ruby generate.rb "$$blank" || exit 1; \
+			ruby generate.rb "$$blank" $(GENERATE_FLAGS) || exit 1; \
 		elif [ -e "$$blank" ] || [ -L "$$blank" ]; then \
 			echo "$$blank exists but is not a regular file" >&2; exit 1; \
 		else \
@@ -109,7 +117,7 @@ docker/generate: docker/build
 			-v $(CURDIR):/home/builder/workdir \
 			-e TERM=$$TERM \
 			rudychung/tsg \
-			$(TRAIL)/$${code}_milestone.yaml || exit 1; \
+			$(TRAIL)/$${code}_milestone.yaml $(GENERATE_FLAGS) || exit 1; \
 		blank=$(TRAIL)/$${code}_blank.yaml; \
 		if [ -f "$$blank" ]; then \
 			docker run -it --rm \
@@ -117,7 +125,7 @@ docker/generate: docker/build
 				-v $(CURDIR):/home/builder/workdir \
 				-e TERM=$$TERM \
 				rudychung/tsg \
-				"$$blank" || exit 1; \
+				"$$blank" $(GENERATE_FLAGS) || exit 1; \
 		elif [ -e "$$blank" ] || [ -L "$$blank" ]; then \
 			echo "$$blank exists but is not a regular file" >&2; exit 1; \
 		else \

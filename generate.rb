@@ -5,20 +5,126 @@ require 'yaml'
 require 'base64'
 
 def help
-  puts "#{__FILE__} <YAML>"
+  puts "#{__FILE__} <YAML> [--hide-preview-layers]"
 end
 
-if ARGV.size != 1
+def list_from(value)
+  case value
+  when nil then []
+  when Array then value.compact
+  else [value]
+  end
+end
+
+def tag_named?(tag, name)
+  escaped = Regexp.escape(name)
+  tag.match?(/inkscape:label\s*=\s*["']#{escaped}["']/) ||
+    tag.match?(/\bid\s*=\s*["']#{escaped}["']/)
+end
+
+def apply_display_none(tag)
+  if tag =~ /style\s*=\s*(['"])(.*?)\1/m
+    quote = $1
+    style = $2
+    style = if style =~ /display\s*:/
+              style.sub(/display\s*:\s*[^;]*/, 'display:none')
+            else
+              "display:none;#{style}"
+            end
+    tag.sub(/style\s*=\s*(['"]).*?\1/m, "style=#{quote}#{style}#{quote}")
+  else
+    tag.sub(/>\z/, ' style="display:none">')
+  end
+end
+
+def hide_svg_elements(svg, names)
+  names = list_from(names).map(&:to_s).reject(&:empty?)
+  return svg if names.empty?
+
+  svg.gsub(/<[A-Za-z][\w:-]*\b[^>]*?>/m) do |tag|
+    if names.any? { |name| tag_named?(tag, name) }
+      apply_display_none(tag)
+    else
+      tag
+    end
+  end
+end
+
+def apply_fill_color(tag, color)
+  color = color.to_s.strip
+  return tag if color.empty?
+
+  if tag =~ /style\s*=\s*(['"])(.*?)\1/m
+    quote = $1
+    style = $2
+    style = if style =~ /fill\s*:/
+              style.sub(/fill\s*:\s*[^;]*/, "fill:#{color}")
+            else
+              "fill:#{color};#{style}"
+            end
+    tag.sub(/style\s*=\s*(['"]).*?\1/m, "style=#{quote}#{style}#{quote}")
+  elsif tag =~ /fill\s*=\s*(['"])/
+    quote = $1
+    tag.sub(/fill\s*=\s*(['"]).*?\1/, "fill=#{quote}#{color}#{quote}")
+  else
+    tag.sub(/>\z/, " fill=\"#{color}\">")
+  end
+end
+
+def recolor_svg_elements(svg, names, color)
+  names = list_from(names).map(&:to_s).reject(&:empty?)
+  return svg if names.empty? || color.to_s.strip.empty?
+
+  svg.gsub(/<[A-Za-z][\w:-]*\b[^>]*?>/m) do |tag|
+    if names.any? { |name| tag_named?(tag, name) }
+      apply_fill_color(tag, color)
+    else
+      tag
+    end
+  end
+end
+
+def line_kind(values)
+  name = values['路線名稱'].to_s
+  return '支線' if name.include?('支線')
+  '主線'
+end
+
+DEFAULT_FILL = {
+  'background_color' => {
+    '主線' => '#ffff00',
+    '支線' => '#f58635',
+  }
+}.freeze
+
+if ARGV.empty?
   help
   exit 1
 end
 
-puts "Reading spec: #{}"
-spec_file = ARGV[0]
+args = ARGV.dup
+hide_preview_layers = !args.delete('--hide-preview-layers').nil?
+unknown_flags = args.select { |a| a.start_with?('-') }
+unless unknown_flags.empty?
+  warn "Unknown option(s): #{unknown_flags.join(' ')}"
+  help
+  exit 1
+end
+if args.size != 1
+  help
+  exit 1
+end
+
+puts "Reading spec: #{args[0]}"
+spec_file = args[0]
 base_dir = File.dirname(spec_file)
 spec = YAML.load_file(spec_file)
 input = spec['input']
-data = File.join(base_dir, input['data'])
+data_files = list_from(input['data']).map { |p| File.join(base_dir, p.to_s) }
+if data_files.empty?
+  warn "input.data is missing in #{spec_file}"
+  exit 1
+end
 tmpl = File.join(base_dir, input['template'])
 mask = File.join(base_dir, input['mask'])
 output = spec['output']
@@ -29,41 +135,69 @@ gsubs = {} unless gsubs
 repeat = slot['repeat']
 max = repeat['num']
 slots_per_pages = repeat['x']*repeat['y']
+preview_layers = list_from(input['preview_layers'])
+hide_when_empty = input['hide_when_empty'] || {}
+hide_when_empty = {} unless hide_when_empty.is_a?(Hash)
+fill = input.key?('fill') ? (input['fill'] || {}) : DEFAULT_FILL
+fill = {} unless fill.is_a?(Hash)
+
+if hide_preview_layers && preview_layers.empty?
+  warn "Warning: --hide-preview-layers was set, but input.preview_layers is empty in #{spec_file}"
+end
+if hide_preview_layers && !preview_layers.empty?
+  puts "Hiding preview layers: #{preview_layers.join(', ')}"
+end
 
 cols = []
 total = 0
+tmpl_text = File.read(tmpl)
 
 sh "rm -rf #{output_dir}/intermediate/"
 
-puts "Reading data CSV: #{data}"
-CSV.foreach(data, encoding: 'bom|utf-8').with_index do |row, row_num|
-  if row_num == 0
-    row.each_with_index do |col, col_num|
-      cols.push(col)
-    end
-    puts "Replacing with headers: #{cols}"
-  else
-    filename = sprintf("sign_%04d.svg", row_num)
-    FileUtils.mkdir_p("#{output_dir}/intermediate/")
-    intermediate = "#{output_dir}/intermediate/#{filename}"
-    puts "Creating intermediate SVG: #{intermediate}"
-    File.open(intermediate, "w+") do |f|
-      File.foreach(tmpl) do |line|
-        row.each_with_index do |col, col_num|
-          unless col
-            col = ""
-          end
-          header = cols[col_num]
-          line = line.gsub(header, col)
-        end
-        f.puts(line)
+data_files.each do |data|
+  puts "Reading data CSV: #{data}"
+  CSV.foreach(data, encoding: 'bom|utf-8').with_index do |row, row_num|
+    if row_num == 0
+      if cols.empty?
+        row.each { |col| cols.push(col) }
+        puts "Replacing with headers: #{cols}"
+      elsif row != cols
+        warn "CSV header mismatch in #{data}: expected #{cols.inspect}, got #{row.inspect}"
+        exit 1
       end
+    else
+      filename = sprintf("sign_%04d.svg", total + 1)
+      FileUtils.mkdir_p("#{output_dir}/intermediate/")
+      intermediate = "#{output_dir}/intermediate/#{filename}"
+      puts "Creating intermediate SVG: #{intermediate}"
+      svg = tmpl_text.dup
+      values = {}
+      row.each_with_index do |col, col_num|
+        col = "" unless col
+        header = cols[col_num]
+        values[header] = col
+        svg = svg.gsub(header, col) if header
+      end
+      svg = hide_svg_elements(svg, preview_layers) if hide_preview_layers
+      hide_when_empty.each do |header, names|
+        raw = values[header.to_s]
+        if raw.nil? || raw.to_s.strip.empty?
+          svg = hide_svg_elements(svg, names)
+        end
+      end
+      kind = line_kind(values)
+      fill.each do |element, colors|
+        color = colors.is_a?(Hash) ? colors[kind] : colors
+        svg = recolor_svg_elements(svg, element, color)
+      end
+      File.write(intermediate, svg)
+      puts "Vectorizing SVG: #{intermediate}"
+      sh "inkscape #{intermediate} --export-plain-svg --export-text-to-path --export-filename=#{intermediate}"
+      total += 1
+      break if max && total >= max
     end
-    puts "Vectorizing SVG: #{intermediate}"
-    sh "inkscape #{intermediate} --export-plain-svg --export-text-to-path --export-filename=#{intermediate}"
-    total += 1
-    break if max && total >= max
   end
+  break if max && total >= max
 end
 
 num_pages = (total.to_f / slots_per_pages).ceil()

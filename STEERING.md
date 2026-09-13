@@ -93,6 +93,8 @@ Both generators expect the following schema. All paths are relative to the direc
 | `input.mask` | Path to mask SVG |
 | `input.preview_layers` | Optional: Inkscape layer labels or element `id`s (e.g. `Layer 3` crop marks / hole previews). Hidden only when `--hide-preview-layers` is passed |
 | `input.hide_when_empty` | Optional: map of CSV column → element `inkscape:label` or `id` (string or list). Those drawings are hidden automatically when the column is blank |
+| `input.blank_template` | Optional: blank-sign SVG used to pad the last page so the sign count is a multiple of `repeat.x × repeat.y` |
+| `input.blank_data` | Optional: CSV for footer placeholders on those pad signs (e.g. `blank.csv`) |
 | `input.fill` | Optional: map of element `inkscape:label`/`id` → `{主線: color, 支線: color}` (or a single color). Recolors that drawing per row: `路線名稱` containing `支線` uses the 支線 color. Omitted → default `#ffff00` / `#f58635` on `background_color` |
 | `output.dir` | Output directory (relative to spec dir) |
 | `output.prefix` | Prefix for output filenames |

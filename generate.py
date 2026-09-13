@@ -93,6 +93,21 @@ DEFAULT_FILL = {
     }
 }
 
+def inkscape_export(src, dest=None):
+    if dest is None:
+        dest = src
+    subprocess.run(
+        [
+            "inkscape",
+            "--batch-process",
+            src,
+            "--export-plain-svg",
+            "--export-text-to-path",
+            f"--export-filename={dest}",
+        ],
+        check=True,
+    )
+
 def main():
     parser = argparse.ArgumentParser(
         add_help=True,
@@ -162,6 +177,7 @@ def main():
 
     headers = []
     total = 0
+    last_kind = "主線"
     reached_max = False
     with open(tmpl_svg, "r", encoding="utf-8") as tmpl_f:
         tmpl_text = tmpl_f.read()
@@ -203,6 +219,7 @@ def main():
                         if not str(raw).strip():
                             svg = hide_svg_elements(svg, names)
                     kind = line_kind(values)
+                    last_kind = kind
                     for element, colors in fill.items():
                         color = colors.get(kind) if isinstance(colors, dict) else colors
                         svg = recolor_svg_elements(svg, element, color)
@@ -211,13 +228,7 @@ def main():
                         sign_f.write(svg)
 
                     print(f"Vectorizing SVG: {sign_path}")
-                    subprocess.run([
-                        "inkscape",
-                        sign_path,
-                        "--export-plain-svg",
-                        "--export-text-to-path",
-                        f"--export-filename={sign_path}"
-                    ], check=True)
+                    inkscape_export(sign_path)
 
                     total += 1
                     if max_num is not None and total >= max_num:
@@ -225,6 +236,54 @@ def main():
                         break
         if reached_max:
             break
+
+    remain = (
+        (slots_per_page - (total % slots_per_page)) % slots_per_page
+        if slots_per_page > 0 and total > 0
+        else 0
+    )
+    blank_tmpl_name = input_spec.get("blank_template")
+    if blank_tmpl_name and remain:
+        print(f"Padding {remain} blank sign(s) to fill the last page")
+        blank_path = os.path.join(base_dir, str(blank_tmpl_name))
+        with open(blank_path, "r", encoding="utf-8") as bf:
+            blank_text = bf.read()
+        blank_headers = []
+        blank_rows = []
+        blank_data = input_spec.get("blank_data")
+        if blank_data:
+            with open(
+                os.path.join(base_dir, str(blank_data)), "r", encoding="utf-8-sig"
+            ) as csvfile:
+                reader = csv.reader(csvfile)
+                for row_index, row in enumerate(reader):
+                    if row_index == 0:
+                        blank_headers = row
+                    else:
+                        blank_rows.append(row)
+        for i in range(remain):
+            sign_filename = f"sign_{total + 1:04d}.svg"
+            sign_path = os.path.join(intermediate_dir, sign_filename)
+            svg = blank_text
+            values = {"路線名稱": last_kind}
+            if blank_rows:
+                brow = blank_rows[i % len(blank_rows)]
+                for col_idx, col_val in enumerate(brow):
+                    col_val = col_val if col_val else ""
+                    header = blank_headers[col_idx]
+                    values[header] = col_val
+                    svg = svg.replace(header, col_val)
+            if hide_preview_layers:
+                svg = hide_svg_elements(svg, hide_preview)
+            kind = line_kind(values)
+            for element, colors in fill.items():
+                color = colors.get(kind) if isinstance(colors, dict) else colors
+                svg = recolor_svg_elements(svg, element, color)
+            with open(sign_path, "w", encoding="utf-8") as sign_f:
+                sign_f.write(svg)
+            print(f"Vectorizing SVG: {sign_path}")
+            inkscape_export(sign_path)
+            total += 1
 
     # 4) Determine how many pages we need
     num_pages = math.ceil(total / slots_per_page) if slots_per_page > 0 else 0
@@ -290,13 +349,7 @@ def main():
         page_pdf_path = os.path.join(intermediate_dir, page_pdf)
 
         print(f"Exporting page PDF: {page_pdf_path}")
-        subprocess.run([
-            "inkscape",
-            page_svg_path,
-            "--export-plain-svg",
-            "--export-text-to-path",
-            f"--export-filename={page_pdf_path}"
-        ], check=True)
+        inkscape_export(page_svg_path, page_pdf_path)
 
         output_pdf_files.append(page_pdf_path)
 
@@ -339,13 +392,7 @@ def main():
     # 7) Export mask.svg to mask.pdf
     mask_pdf_path = os.path.join(intermediate_dir, "mask.pdf")
     print(f"Exporting mask PDF: {mask_pdf_path}")
-    subprocess.run([
-        "inkscape",
-        mask_svg_path,
-        "--export-plain-svg",
-        "--export-text-to-path",
-        f"--export-filename={mask_pdf_path}"
-    ], check=True)
+    inkscape_export(mask_svg_path, mask_pdf_path)
 
     # 8) Zip all SVG files
     timestamp = time.strftime('%Y%m%d%H%M%S')

@@ -3,11 +3,14 @@ input:
   data:
     - SM301.csv
     - SM302.csv
+    - SM301_SM302_reprints.csv
   mask: mask.svg
   preview_layers:
     - Layer 3
   hide_when_empty:
     里程: mileage_bar
+  blank_template: SM300_blank.svg
+  blank_data: blank.csv
   fill:
     background_color:
       主線: '#ffff00'

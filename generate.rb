@@ -90,6 +90,10 @@ def line_kind(values)
   '主線'
 end
 
+def inkscape_export(src, dest = src)
+  sh "inkscape --batch-process #{src} --export-plain-svg --export-text-to-path --export-filename=#{dest}"
+end
+
 DEFAULT_FILL = {
   'background_color' => {
     '主線' => '#ffff00',
@@ -150,6 +154,7 @@ end
 
 cols = []
 total = 0
+last_kind = '主線'
 tmpl_text = File.read(tmpl)
 
 sh "rm -rf #{output_dir}/intermediate/"
@@ -186,18 +191,67 @@ data_files.each do |data|
         end
       end
       kind = line_kind(values)
+      last_kind = kind
       fill.each do |element, colors|
         color = colors.is_a?(Hash) ? colors[kind] : colors
         svg = recolor_svg_elements(svg, element, color)
       end
       File.write(intermediate, svg)
       puts "Vectorizing SVG: #{intermediate}"
-      sh "inkscape #{intermediate} --export-plain-svg --export-text-to-path --export-filename=#{intermediate}"
+      inkscape_export(intermediate)
       total += 1
       break if max && total >= max
     end
   end
   break if max && total >= max
+end
+
+remain = if slots_per_pages.positive? && total.positive?
+           (slots_per_pages - (total % slots_per_pages)) % slots_per_pages
+         else
+           0
+         end
+blank_tmpl_name = input['blank_template']
+if blank_tmpl_name && remain.positive?
+  puts "Padding #{remain} blank sign(s) to fill the last page"
+  blank_text = File.read(File.join(base_dir, blank_tmpl_name.to_s))
+  blank_headers = []
+  blank_rows = []
+  if input['blank_data']
+    CSV.foreach(File.join(base_dir, input['blank_data'].to_s), encoding: 'bom|utf-8').with_index do |row, row_num|
+      if row_num.zero?
+        blank_headers = row
+      else
+        blank_rows << row
+      end
+    end
+  end
+  remain.times do |i|
+    filename = sprintf("sign_%04d.svg", total + 1)
+    FileUtils.mkdir_p("#{output_dir}/intermediate/")
+    intermediate = "#{output_dir}/intermediate/#{filename}"
+    svg = blank_text.dup
+    values = { '路線名稱' => last_kind }
+    unless blank_rows.empty?
+      brow = blank_rows[i % blank_rows.length]
+      brow.each_with_index do |col, col_num|
+        col = '' unless col
+        header = blank_headers[col_num]
+        values[header] = col
+        svg = svg.gsub(header, col) if header
+      end
+    end
+    svg = hide_svg_elements(svg, preview_layers) if hide_preview_layers
+    kind = line_kind(values)
+    fill.each do |element, colors|
+      color = colors.is_a?(Hash) ? colors[kind] : colors
+      svg = recolor_svg_elements(svg, element, color)
+    end
+    File.write(intermediate, svg)
+    puts "Vectorizing SVG: #{intermediate}"
+    inkscape_export(intermediate)
+    total += 1
+  end
 end
 
 num_pages = (total.to_f / slots_per_pages).ceil()
@@ -242,7 +296,7 @@ for i in 1..num_pages do
   output_svg_files.push output_svg_file
   output_pdf_file = "#{output_dir}/intermediate/#{sprintf("page_%02d.pdf", i)}"
   puts "Exporting page PDF: #{output_pdf_file}"
-  sh "inkscape #{output_svg_file} --export-plain-svg --export-text-to-path --export-filename=#{output_pdf_file}"
+  inkscape_export(output_svg_file, output_pdf_file)
   output_pdf_files.push output_pdf_file
 end
 
@@ -280,7 +334,7 @@ end
 
 mask_pdf_file = "#{output_dir}/intermediate/#{sprintf("mask.pdf")}"
 puts "Exporting mask PDF: #{mask_pdf_file}"
-sh "inkscape #{mask_svg_file} --export-plain-svg --export-text-to-path --export-filename=#{mask_pdf_file}"
+inkscape_export(mask_svg_file, mask_pdf_file)
 
 timestamp = Time.now.strftime('%Y%m%d%H%M%S')
 

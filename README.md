@@ -199,7 +199,7 @@ $ make test
 
 測試會把 repo 複製到暫存目錄，用 `tests/fakebin` 裡的替身取代 Inkscape、pdfunite 與 Ghostscript，再用 Ruby 與 Python 兩個產生器產生每一份 spec，比對產出的 SVG 與 `tests/expected/` 記錄的雜湊值；另用 `tests/fixtures/` 的小樣本檢查加印、補空、隱藏圖層與換色，以及應該停止產生的輸入。不會動到各步道的 `output/`。
 
-已送印的路標重新產生時必須和送印時相同，所以雜湊值不同就是失敗。確定是要的改變，例如新增步道或修改未送印的路標，再執行 `python3 tests/run_tests.py --update` 更新雜湊值，並在 PR 說明哪些檔案改變。
+已送印的路標重新產生時必須和送印時相同，所以雜湊值不同就是失敗。確定是要的改變，例如新增步道或修改未送印的路標，再執行 `.venv/bin/python3 tests/run_tests.py --update` 更新雜湊值，並在 PR 說明哪些檔案改變。
 
 ## 已知限制
 

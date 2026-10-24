@@ -84,12 +84,15 @@ def recolor_svg_elements(svg, names, color):
         return tag
     return re.sub(r'<[A-Za-z][\w:-]*\b[^>]*?>', repl, svg, flags=re.DOTALL)
 
-def resolve_reprints(path, headers, rows, tmpl_text):
+def resolve_reprints(path, headers, rows, tmpl_text, styling_columns):
     """Reprints repeat signs that already exist in input.data, so they can never
     drift from them. Each column of the reprints CSV names a data column to
     match on. A row may match several signs only if they print the same, i.e.
-    agree on every column the template uses; the first one is taken."""
-    printed = [i for i, h in enumerate(headers) if h and h in tmpl_text]
+    agree on every column the template uses and every column that hides or
+    recolors a drawing (styling_columns); the first one is taken."""
+    printed = [
+        i for i, h in enumerate(headers) if h and (h in tmpl_text or h in styling_columns)
+    ]
     def cell(row, i):
         return row[i] if i < len(row) else ""
     picked = []
@@ -232,7 +235,8 @@ def main():
     if input_spec.get("reprints"):
         reprints_csv = os.path.join(base_dir, str(input_spec["reprints"]))
         print(f"Reading reprints CSV: {reprints_csv}")
-        rows.extend(resolve_reprints(reprints_csv, headers, rows, tmpl_text))
+        styling_columns = [str(h) for h in hide_when_empty] + (["路線名稱"] if fill else [])
+        rows.extend(resolve_reprints(reprints_csv, headers, rows, tmpl_text, styling_columns))
 
     for row in rows:
         sign_filename = f"sign_{total + 1:04d}.svg"

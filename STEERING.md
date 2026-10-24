@@ -90,7 +90,7 @@ Both generators expect the following schema. All paths are relative to the direc
 |-----|-------------|
 | `input.template` | Path to template SVG |
 | `input.data` | Path to data CSV, or a list of CSVs with the same headers (rows are concatenated in order) |
-| `input.reprints` | Optional: CSV selecting signs from `input.data` to print once more, appended after them. Its header names data columns to match on (e.g. `路線編號`, `Waypoint`, `分段第一行`); each row must match at least one sign, and several matches must agree on every column the template uses, else the run stops |
+| `input.reprints` | Optional: CSV selecting signs from `input.data` to print once more, appended after them. Its header names data columns to match on (e.g. `路線編號`, `Waypoint`, `分段第一行`); each row must match at least one sign, and several matches must agree on every column the template uses or that hides or recolors a drawing (`hide_when_empty` columns, and `路線名稱` when `input.fill` is set), else the run stops |
 | `input.mask` | Path to mask SVG |
 | `input.preview_layers` | Optional: Inkscape layer labels or element `id`s (e.g. `Layer 3` crop marks / hole previews). Hidden only when `--hide-preview-layers` is passed |
 | `input.hide_when_empty` | Optional: map of CSV column → element `inkscape:label` or `id` (string or list). Those drawings are hidden automatically when the column is blank |

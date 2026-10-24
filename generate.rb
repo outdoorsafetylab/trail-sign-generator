@@ -96,10 +96,13 @@ end
 # Reprints repeat signs that already exist in input.data, so they can never
 # drift from them. Each column of the reprints CSV names a data column to match
 # on. A row may match several signs only if they print the same, i.e. agree on
-# every column the template uses; the first one is taken.
-def resolve_reprints(file, cols, rows, tmpl_text)
+# every column the template uses and every column that hides or recolors a
+# drawing (styling_columns); the first one is taken.
+def resolve_reprints(file, cols, rows, tmpl_text, styling_columns)
   keys = nil
-  printed = cols.each_index.select { |i| cols[i] && tmpl_text.include?(cols[i]) }
+  printed = cols.each_index.select do |i|
+    cols[i] && (tmpl_text.include?(cols[i]) || styling_columns.include?(cols[i]))
+  end
   picked = []
   CSV.foreach(file, encoding: 'bom|utf-8').with_index do |row, row_num|
     if row_num.zero?
@@ -215,7 +218,8 @@ end
 if input['reprints']
   reprints = File.join(base_dir, input['reprints'].to_s)
   puts "Reading reprints CSV: #{reprints}"
-  rows.concat(resolve_reprints(reprints, cols, rows, tmpl_text))
+  styling_columns = hide_when_empty.keys.map(&:to_s) + (fill.empty? ? [] : ['路線名稱'])
+  rows.concat(resolve_reprints(reprints, cols, rows, tmpl_text, styling_columns))
 end
 
 rows.each do |row|

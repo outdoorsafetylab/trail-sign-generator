@@ -192,6 +192,12 @@ def check_fixtures(cwd):
         stops = [
             ("nomatch", ["data.csv"], {"reprints": "reprints_nomatch.csv"}, "No sign"),
             ("differ", ["data.csv"], {"reprints": "reprints_differ.csv"}, "print differently"),
+            # Same text, different background: 路線名稱 drives input.fill.
+            ("differ_fill", ["differ_fill.csv"], {"reprints": "reprints_0k.csv"}, "print differently"),
+            # Same text, mileage_bar shown on one only: 里程條 is not in the template.
+            ("differ_hide", ["differ_hide.csv"],
+             {"reprints": "reprints_0k.csv", "hide_when_empty": {"里程條": "mileage_bar"}},
+             "print differently"),
             ("unknown", ["data.csv"], {"reprints": "reprints_unknown.csv"}, "Unknown column"),
             ("mismatch", ["data.csv", "mismatch.csv"], {}, "header mismatch"),
         ]

@@ -2,7 +2,7 @@ input:
   template: SM300_milestone.svg
   data:
     - SM300.csv
-    - SM300_reprints.csv
+  reprints: SM300_reprints.csv
   mask: mask.svg
   # Layers hidden only when generating with --hide-preview-layers (crop marks / holes).
   preview_layers:

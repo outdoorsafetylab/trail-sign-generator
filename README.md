@@ -57,6 +57,7 @@ ruby generate.rb <設定檔路徑> --hide-preview-layers   # 送鋁板：隱藏 
 input:
   template: 樣版檔 SVG
   data: 資料檔 CSV（也可列多個，表頭須相同，列會依序接續）
+  reprints: 加印檔 CSV  # 選填：從資料檔挑出要多印一面的路標，接在最後；每一欄都是比對條件，欄名須是資料檔的欄名
   mask: 遮罩檔 SVG (標示要切割反光材質的區域)
   preview_layers:        # 選填：校對用圖層／繪圖名稱（inkscape:label 或 id）
     - Layer 3            # 預設仍會印出；加上 --hide-preview-layers 才隱藏

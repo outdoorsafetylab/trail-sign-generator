@@ -3,7 +3,7 @@ input:
   data:
     - SM301.csv
     - SM302.csv
-    - SM301_SM302_reprints.csv
+  reprints: SM301_SM302_reprints.csv
   mask: mask.svg
   preview_layers:
     - Layer 3

@@ -25,6 +25,14 @@ def tag_named(tag, name):
         or re.search(rf'\bid\s*=\s*["\']{escaped}["\']', tag) is not None
     )
 
+def add_attribute(tag, attr):
+    """Adds an attribute before the closing `>` or `/>` of a start tag."""
+    if tag.endswith('/>'):
+        return tag[:-2].rstrip() + f' {attr}/>'
+    if tag.endswith('>'):
+        return tag[:-1] + f' {attr}>'
+    return tag
+
 def apply_display_none(tag):
     match = re.search(r'style\s*=\s*(["\'])(.*?)\1', tag, flags=re.DOTALL)
     if match:
@@ -34,9 +42,7 @@ def apply_display_none(tag):
         else:
             style = f'display:none;{style}'
         return tag[:match.start()] + f'style={quote}{style}{quote}' + tag[match.end():]
-    if tag.endswith('>'):
-        return tag[:-1] + ' style="display:none">'
-    return tag
+    return add_attribute(tag, 'style="display:none"')
 
 def hide_svg_elements(svg, names):
     names = [str(name) for name in list_from(names) if str(name)]
@@ -65,9 +71,7 @@ def apply_fill_color(tag, color):
     if fill_attr:
         quote = fill_attr.group(1)
         return re.sub(r'fill\s*=\s*(["\']).*?\1', f'fill={quote}{color}{quote}', tag, count=1)
-    if tag.endswith('>'):
-        return tag[:-1] + f' fill="{color}">'
-    return tag
+    return add_attribute(tag, f'fill="{color}"')
 
 def recolor_svg_elements(svg, names, color):
     names = [str(name) for name in list_from(names) if str(name)]
@@ -85,13 +89,6 @@ def line_kind(values):
     if '支線' in name:
         return '支線'
     return '主線'
-
-DEFAULT_FILL = {
-    'background_color': {
-        '主線': '#ffff00',
-        '支線': '#f58635',
-    }
-}
 
 def inkscape_export(src, dest=None):
     if dest is None:
@@ -154,10 +151,7 @@ def main():
     hide_when_empty = input_spec.get("hide_when_empty") or {}
     if not isinstance(hide_when_empty, dict):
         hide_when_empty = {}
-    if "fill" in input_spec:
-        fill = input_spec.get("fill") or {}
-    else:
-        fill = DEFAULT_FILL
+    fill = input_spec.get("fill") or {}
     if not isinstance(fill, dict):
         fill = {}
     if hide_preview_layers and not hide_preview:

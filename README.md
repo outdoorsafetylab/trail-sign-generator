@@ -60,7 +60,7 @@ input:
     - Layer 3            # 預設仍會印出；加上 --hide-preview-layers 才隱藏
   hide_when_empty:       # 選填：CSV 欄位空白時自動隱藏的繪圖名稱
     里程: mileage_bar
-  fill:                  # 選填：依主／支線改底色（預設黃／橙，作用在 background_color）
+  fill:                  # 選填：依主／支線改底色；不寫就保留樣版原本的顏色
     background_color:
       主線: '#ffff00'
       支線: '#f58635'

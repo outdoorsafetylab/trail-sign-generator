@@ -12,6 +12,10 @@ input:
     里程: mileage_bar
   blank_template: SM300_blank.svg
   blank_data: blank.csv
+  fill:
+    background_color:
+      主線: '#ffff00'
+      支線: '#f58635'
 output:
   dir: output
   prefix: SM300_主線_編碼路標_

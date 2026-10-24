@@ -22,6 +22,15 @@ def tag_named?(tag, name)
     tag.match?(/\bid\s*=\s*["']#{escaped}["']/)
 end
 
+# Adds an attribute before the closing `>` or `/>` of a start tag.
+def add_attribute(tag, attr)
+  if tag.end_with?('/>')
+    "#{tag[0...-2].rstrip} #{attr}/>"
+  else
+    tag.sub(/>\z/, " #{attr}>")
+  end
+end
+
 def apply_display_none(tag)
   if tag =~ /style\s*=\s*(['"])(.*?)\1/m
     quote = $1
@@ -33,7 +42,7 @@ def apply_display_none(tag)
             end
     tag.sub(/style\s*=\s*(['"]).*?\1/m, "style=#{quote}#{style}#{quote}")
   else
-    tag.sub(/>\z/, ' style="display:none">')
+    add_attribute(tag, 'style="display:none"')
   end
 end
 
@@ -67,7 +76,7 @@ def apply_fill_color(tag, color)
     quote = $1
     tag.sub(/fill\s*=\s*(['"]).*?\1/, "fill=#{quote}#{color}#{quote}")
   else
-    tag.sub(/>\z/, " fill=\"#{color}\">")
+    add_attribute(tag, "fill=\"#{color}\"")
   end
 end
 
@@ -93,13 +102,6 @@ end
 def inkscape_export(src, dest = src)
   sh "inkscape --batch-process #{src} --export-plain-svg --export-text-to-path --export-filename=#{dest}"
 end
-
-DEFAULT_FILL = {
-  'background_color' => {
-    '主線' => '#ffff00',
-    '支線' => '#f58635',
-  }
-}.freeze
 
 if ARGV.empty?
   help
@@ -142,7 +144,7 @@ slots_per_pages = repeat['x']*repeat['y']
 preview_layers = list_from(input['preview_layers'])
 hide_when_empty = input['hide_when_empty'] || {}
 hide_when_empty = {} unless hide_when_empty.is_a?(Hash)
-fill = input.key?('fill') ? (input['fill'] || {}) : DEFAULT_FILL
+fill = input['fill'] || {}
 fill = {} unless fill.is_a?(Hash)
 
 if hide_preview_layers && preview_layers.empty?

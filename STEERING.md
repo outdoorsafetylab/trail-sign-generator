@@ -10,7 +10,7 @@ This document is the single source of truth for the project’s purpose, archite
 
 **Who:** Maintainers and contributors (e.g. 中華民國山岳協會, trail admins). Output is sent to vendors (e.g. 科邁銘板) for production; production tooling rights are via 桃園市山岳協會.
 
-**Scope:** This repo owns the generator only: spec format, pipeline, and Docker. It does not own print specs, vendor contracts, or trail content authoring workflows.
+**Scope:** This repo owns the generator only: spec format, pipeline, and Docker. It does not own print specs, vendor contracts, or trail content authoring workflows. [WORKFLOW.md](WORKFLOW.md) describes the whole sign-building workflow for orientation; the steps outside this repo belong to their own tools.
 
 ---
 

@@ -87,8 +87,18 @@ help:
 clean:
 	rm -rf $(TRAIL)/output
 
-test:
-	python3 tests/run_tests.py
+# Homebrew's python3 refuses a system-wide pip install (PEP 668), so the test
+# runner gets its own virtualenv, created on first use. The marker is written
+# only after PyYAML installs, so a failed install is retried on the next run.
+VENV := .venv
+
+$(VENV)/.installed:
+	python3 -m venv $(VENV)
+	$(VENV)/bin/pip install --quiet pyyaml
+	touch $@
+
+test: $(VENV)/.installed
+	$(VENV)/bin/python3 tests/run_tests.py
 
 # The milestone spec is required; the blank one is optional, because not every
 # line orders blank signs (several trails ship a milestone spec only).

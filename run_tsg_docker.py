@@ -53,6 +53,13 @@ def main():
         required=False,
     )
 
+    parser.add_argument(
+        "--hide-preview-layers",
+        metavar="Hide preview layers",
+        action="store_true",
+        help="Hide YAML input.preview_layers (crop marks / hole previews) for aluminium production",
+    )
+
     args = parser.parse_args()
 
     # Post-processing
@@ -66,8 +73,10 @@ def main():
         "-v", f"{args.PWD}:/home/builder/workdir",
         "-e", f"TERM={args.term}",
         args.docker_image,
-        args.YAML_CONFIG
+        args.YAML_CONFIG,
     ]
+    if args.hide_preview_layers:
+        command.append("--hide-preview-layers")
 
     print("Executing command:")
     print(" ".join(command))

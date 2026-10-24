@@ -1,0 +1,35 @@
+input:
+  template: SM300_milestone.svg
+  data:
+    - SM301.csv
+    - SM302.csv
+    - SM301_SM302_reprints.csv
+  mask: mask.svg
+  preview_layers:
+    - Layer 3
+  hide_when_empty:
+    里程: mileage_bar
+  blank_template: SM300_blank.svg
+  blank_data: blank.csv
+  fill:
+    background_color:
+      主線: '#ffff00'
+      支線: '#f58635'
+output:
+  dir: output
+  prefix: SM301_SM302_支線_編碼路標_
+  w: 610
+  h: 488
+  slot:
+    # gsub:
+    #   '#000000;': '#000000 device-cmyk(0,0,0,1);'
+    #   '#ffffff;': '#ffffff device-cmyk(0,0,0,0);'
+    #   '#b2b2b2;': '#b2b2b2 device-cmyk(0,0,0,0.3);'
+    #   '#f58635;': '#f58635 device-cmyk(0,0.45,0.78,0.04);'
+    x: 26.28
+    y: 40.251
+    w: 112.035
+    h: 103.046
+    repeat:
+      x: 5
+      y: 4

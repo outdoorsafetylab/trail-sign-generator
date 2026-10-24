@@ -2,22 +2,124 @@
 
 import sys
 import os
+import argparse
 import csv
-import yaml
 import math
+import re
 import time
 import subprocess
 
-def help_message():
-    print(f"Usage: {os.path.basename(sys.argv[0])} <YAML>")
-    print("Please provide exactly one argument: the path to the YAML spec file.")
+import yaml
+
+def list_from(value):
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [item for item in value if item is not None]
+    return [value]
+
+def tag_named(tag, name):
+    escaped = re.escape(name)
+    return (
+        re.search(rf'inkscape:label\s*=\s*["\']{escaped}["\']', tag) is not None
+        or re.search(rf'\bid\s*=\s*["\']{escaped}["\']', tag) is not None
+    )
+
+def add_attribute(tag, attr):
+    """Adds an attribute before the closing `>` or `/>` of a start tag."""
+    if tag.endswith('/>'):
+        return tag[:-2].rstrip() + f' {attr}/>'
+    if tag.endswith('>'):
+        return tag[:-1] + f' {attr}>'
+    return tag
+
+def apply_display_none(tag):
+    match = re.search(r'style\s*=\s*(["\'])(.*?)\1', tag, flags=re.DOTALL)
+    if match:
+        quote, style = match.group(1), match.group(2)
+        if re.search(r'display\s*:', style):
+            style = re.sub(r'display\s*:\s*[^;]*', 'display:none', style, count=1)
+        else:
+            style = f'display:none;{style}'
+        return tag[:match.start()] + f'style={quote}{style}{quote}' + tag[match.end():]
+    return add_attribute(tag, 'style="display:none"')
+
+def hide_svg_elements(svg, names):
+    names = [str(name) for name in list_from(names) if str(name)]
+    if not names:
+        return svg
+    def repl(match):
+        tag = match.group(0)
+        if any(tag_named(tag, name) for name in names):
+            return apply_display_none(tag)
+        return tag
+    return re.sub(r'<[A-Za-z][\w:-]*\b[^>]*?>', repl, svg, flags=re.DOTALL)
+
+def apply_fill_color(tag, color):
+    color = str(color).strip()
+    if not color:
+        return tag
+    match = re.search(r'style\s*=\s*(["\'])(.*?)\1', tag, flags=re.DOTALL)
+    if match:
+        quote, style = match.group(1), match.group(2)
+        if re.search(r'fill\s*:', style):
+            style = re.sub(r'fill\s*:\s*[^;]*', f'fill:{color}', style, count=1)
+        else:
+            style = f'fill:{color};{style}'
+        return tag[:match.start()] + f'style={quote}{style}{quote}' + tag[match.end():]
+    fill_attr = re.search(r'fill\s*=\s*(["\'])', tag)
+    if fill_attr:
+        quote = fill_attr.group(1)
+        return re.sub(r'fill\s*=\s*(["\']).*?\1', f'fill={quote}{color}{quote}', tag, count=1)
+    return add_attribute(tag, f'fill="{color}"')
+
+def recolor_svg_elements(svg, names, color):
+    names = [str(name) for name in list_from(names) if str(name)]
+    if not names or not str(color).strip():
+        return svg
+    def repl(match):
+        tag = match.group(0)
+        if any(tag_named(tag, name) for name in names):
+            return apply_fill_color(tag, color)
+        return tag
+    return re.sub(r'<[A-Za-z][\w:-]*\b[^>]*?>', repl, svg, flags=re.DOTALL)
+
+def line_kind(values):
+    name = str(values.get('路線名稱') or '')
+    if '支線' in name:
+        return '支線'
+    return '主線'
+
+def inkscape_export(src, dest=None):
+    if dest is None:
+        dest = src
+    subprocess.run(
+        [
+            "inkscape",
+            "--batch-process",
+            src,
+            "--export-plain-svg",
+            "--export-text-to-path",
+            f"--export-filename={dest}",
+        ],
+        check=True,
+    )
 
 def main():
-    if len(sys.argv) != 2:
-        help_message()
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        add_help=True,
+        usage="%(prog)s <YAML> [--hide-preview-layers]",
+    )
+    parser.add_argument("yaml", help="Path to the YAML spec file")
+    parser.add_argument(
+        "--hide-preview-layers",
+        action="store_true",
+        help="Hide layers listed in input.preview_layers (crop marks / hole previews)",
+    )
+    args = parser.parse_args()
 
-    spec_file = sys.argv[1]
+    spec_file = args.yaml
+    hide_preview_layers = args.hide_preview_layers
     base_dir = os.path.dirname(spec_file)
     if not base_dir:
         base_dir = "."
@@ -27,7 +129,12 @@ def main():
         spec = yaml.safe_load(f)
 
     input_spec = spec["input"]
-    data_csv = os.path.join(base_dir, input_spec["data"])
+    data_csvs = [
+        os.path.join(base_dir, str(p)) for p in list_from(input_spec.get("data"))
+    ]
+    if not data_csvs:
+        print(f"input.data is missing in {spec_file}", file=sys.stderr)
+        sys.exit(1)
     tmpl_svg = os.path.join(base_dir, input_spec["template"])
     mask_svg = os.path.join(base_dir, input_spec["mask"])
 
@@ -40,57 +147,137 @@ def main():
     repeat = slot_info["repeat"]
     max_num = repeat.get("num", None)
     slots_per_page = repeat["x"] * repeat["y"]
+    hide_preview = list_from(input_spec.get("preview_layers"))
+    hide_when_empty = input_spec.get("hide_when_empty") or {}
+    if not isinstance(hide_when_empty, dict):
+        hide_when_empty = {}
+    fill = input_spec.get("fill") or {}
+    if not isinstance(fill, dict):
+        fill = {}
+    if hide_preview_layers and not hide_preview:
+        print(
+            f"Warning: --hide-preview-layers was set, but input.preview_layers is empty in {spec_file}",
+            file=sys.stderr,
+        )
+    if hide_preview_layers and hide_preview:
+        print("Hiding preview layers: " + ", ".join(str(n) for n in hide_preview))
 
     # 1) Remove intermediate directory if it exists
     intermediate_dir = os.path.join(output_dir, "intermediate")
     print(f"Removing any existing intermediate directory: {intermediate_dir}")
     subprocess.run(["rm", "-rf", intermediate_dir], check=True)
 
-    # 2) Read CSV and create intermediate SVGs
-    print(f"Reading data CSV: {data_csv}")
     os.makedirs(intermediate_dir, exist_ok=True)
 
     headers = []
     total = 0
+    last_kind = "主線"
+    reached_max = False
+    with open(tmpl_svg, "r", encoding="utf-8") as tmpl_f:
+        tmpl_text = tmpl_f.read()
 
     # utf-8-sig, not utf-8: CSVs exported from Excel carry a BOM, which would
     # otherwise stay glued to the first header name and stop that column's
     # placeholder from being substituted in the template.
-    with open(data_csv, "r", encoding="utf-8-sig") as csvfile:
-        reader = csv.reader(csvfile)
-        for row_index, row in enumerate(reader):
-            if row_index == 0:
-                # First row is column headers
-                headers = row
-                print(f"Replacing with headers: {headers}")
-            else:
-                sign_filename = f"sign_{row_index:04d}.svg"
-                sign_path = os.path.join(intermediate_dir, sign_filename)
+    for data_csv in data_csvs:
+        print(f"Reading data CSV: {data_csv}")
+        with open(data_csv, "r", encoding="utf-8-sig") as csvfile:
+            reader = csv.reader(csvfile)
+            for row_index, row in enumerate(reader):
+                if row_index == 0:
+                    if not headers:
+                        headers = row
+                        print(f"Replacing with headers: {headers}")
+                    elif row != headers:
+                        print(
+                            f"CSV header mismatch in {data_csv}: expected {headers}, got {row}",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
+                else:
+                    sign_filename = f"sign_{total + 1:04d}.svg"
+                    sign_path = os.path.join(intermediate_dir, sign_filename)
 
-                # Replace placeholders in the template and write out an SVG
-                with open(tmpl_svg, "r", encoding="utf-8") as tmpl_f, \
-                     open(sign_path, "w", encoding="utf-8") as sign_f:
-                    for line in tmpl_f:
-                        for col_idx, col_val in enumerate(row):
-                            col_val = col_val if col_val else ""
-                            line = line.replace(headers[col_idx], col_val)
-                        sign_f.write(line)
+                    svg = tmpl_text
+                    values = {}
+                    for col_idx, col_val in enumerate(row):
+                        col_val = col_val if col_val else ""
+                        header = headers[col_idx]
+                        values[header] = col_val
+                        svg = svg.replace(header, col_val)
 
-                # 3) Vectorize (text-to-path) the SVG via Inkscape
-                #    Overwrite the original file in place
-                #    (exactly as in the Ruby script)
-                print(f"Vectorizing SVG: {sign_path}")
-                subprocess.run([
-                    "inkscape",
-                    sign_path,
-                    "--export-plain-svg",
-                    "--export-text-to-path",
-                    f"--export-filename={sign_path}"
-                ], check=True)
+                    if hide_preview_layers:
+                        svg = hide_svg_elements(svg, hide_preview)
+                    for header, names in hide_when_empty.items():
+                        raw = values.get(str(header), "")
+                        if not str(raw).strip():
+                            svg = hide_svg_elements(svg, names)
+                    kind = line_kind(values)
+                    last_kind = kind
+                    for element, colors in fill.items():
+                        color = colors.get(kind) if isinstance(colors, dict) else colors
+                        svg = recolor_svg_elements(svg, element, color)
 
-                total += 1
-                if max_num is not None and total >= max_num:
-                    break
+                    with open(sign_path, "w", encoding="utf-8") as sign_f:
+                        sign_f.write(svg)
+
+                    print(f"Vectorizing SVG: {sign_path}")
+                    inkscape_export(sign_path)
+
+                    total += 1
+                    if max_num is not None and total >= max_num:
+                        reached_max = True
+                        break
+        if reached_max:
+            break
+
+    remain = (
+        (slots_per_page - (total % slots_per_page)) % slots_per_page
+        if slots_per_page > 0 and total > 0
+        else 0
+    )
+    blank_tmpl_name = input_spec.get("blank_template")
+    if blank_tmpl_name and remain:
+        print(f"Padding {remain} blank sign(s) to fill the last page")
+        blank_path = os.path.join(base_dir, str(blank_tmpl_name))
+        with open(blank_path, "r", encoding="utf-8") as bf:
+            blank_text = bf.read()
+        blank_headers = []
+        blank_rows = []
+        blank_data = input_spec.get("blank_data")
+        if blank_data:
+            with open(
+                os.path.join(base_dir, str(blank_data)), "r", encoding="utf-8-sig"
+            ) as csvfile:
+                reader = csv.reader(csvfile)
+                for row_index, row in enumerate(reader):
+                    if row_index == 0:
+                        blank_headers = row
+                    else:
+                        blank_rows.append(row)
+        for i in range(remain):
+            sign_filename = f"sign_{total + 1:04d}.svg"
+            sign_path = os.path.join(intermediate_dir, sign_filename)
+            svg = blank_text
+            values = {"路線名稱": last_kind}
+            if blank_rows:
+                brow = blank_rows[i % len(blank_rows)]
+                for col_idx, col_val in enumerate(brow):
+                    col_val = col_val if col_val else ""
+                    header = blank_headers[col_idx]
+                    values[header] = col_val
+                    svg = svg.replace(header, col_val)
+            if hide_preview_layers:
+                svg = hide_svg_elements(svg, hide_preview)
+            kind = line_kind(values)
+            for element, colors in fill.items():
+                color = colors.get(kind) if isinstance(colors, dict) else colors
+                svg = recolor_svg_elements(svg, element, color)
+            with open(sign_path, "w", encoding="utf-8") as sign_f:
+                sign_f.write(svg)
+            print(f"Vectorizing SVG: {sign_path}")
+            inkscape_export(sign_path)
+            total += 1
 
     # 4) Determine how many pages we need
     num_pages = math.ceil(total / slots_per_page) if slots_per_page > 0 else 0
@@ -156,13 +343,7 @@ def main():
         page_pdf_path = os.path.join(intermediate_dir, page_pdf)
 
         print(f"Exporting page PDF: {page_pdf_path}")
-        subprocess.run([
-            "inkscape",
-            page_svg_path,
-            "--export-plain-svg",
-            "--export-text-to-path",
-            f"--export-filename={page_pdf_path}"
-        ], check=True)
+        inkscape_export(page_svg_path, page_pdf_path)
 
         output_pdf_files.append(page_pdf_path)
 
@@ -205,13 +386,7 @@ def main():
     # 7) Export mask.svg to mask.pdf
     mask_pdf_path = os.path.join(intermediate_dir, "mask.pdf")
     print(f"Exporting mask PDF: {mask_pdf_path}")
-    subprocess.run([
-        "inkscape",
-        mask_svg_path,
-        "--export-plain-svg",
-        "--export-text-to-path",
-        f"--export-filename={mask_pdf_path}"
-    ], check=True)
+    inkscape_export(mask_svg_path, mask_pdf_path)
 
     # 8) Zip all SVG files
     timestamp = time.strftime('%Y%m%d%H%M%S')

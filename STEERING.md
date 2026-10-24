@@ -89,8 +89,13 @@ Both generators expect the following schema. All paths are relative to the direc
 | Key | Description |
 |-----|-------------|
 | `input.template` | Path to template SVG |
-| `input.data` | Path to data CSV |
+| `input.data` | Path to data CSV, or a list of CSVs with the same headers (rows are concatenated in order) |
 | `input.mask` | Path to mask SVG |
+| `input.preview_layers` | Optional: Inkscape layer labels or element `id`s (e.g. `Layer 3` crop marks / hole previews). Hidden only when `--hide-preview-layers` is passed |
+| `input.hide_when_empty` | Optional: map of CSV column → element `inkscape:label` or `id` (string or list). Those drawings are hidden automatically when the column is blank |
+| `input.blank_template` | Optional: blank-sign SVG used to pad the last page so the sign count is a multiple of `repeat.x × repeat.y` |
+| `input.blank_data` | Optional: CSV for footer placeholders on those pad signs (e.g. `blank.csv`) |
+| `input.fill` | Optional: map of element `inkscape:label`/`id` → `{主線: color, 支線: color}` (or a single color). Recolors that drawing per row: `路線名稱` containing `支線` uses the 支線 color. Omitted → the template's own colors are kept |
 | `output.dir` | Output directory (relative to spec dir) |
 | `output.prefix` | Prefix for output filenames |
 | `output.w`, `output.h` | Page size in mm |
@@ -108,12 +113,12 @@ Specs are named `<LINE_CODE>_milestone.yaml` and `<LINE_CODE>_blank.yaml`, so on
 
 | Method | Command |
 |--------|---------|
-| **Local (Ruby)** | `ruby generate.rb <path/to/spec.yaml>` from repo root. Requires Ruby, Inkscape, pdfunite, gs. |
-| **Local (Python)** | `python3 generate.py <path/to/spec.yaml>`. Same external tools. |
-| **Docker (CLI)** | `docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM rudychung/tsg <spec.yaml>` — spec path is relative to mounted dir. |
+| **Local (Ruby)** | `ruby generate.rb <path/to/spec.yaml> [--hide-preview-layers]` from repo root. Requires Ruby, Inkscape, pdfunite, gs. |
+| **Local (Python)** | `python3 generate.py <path/to/spec.yaml> [--hide-preview-layers]`. Same external tools. |
+| **Docker (CLI)** | `docker run -it --rm --user builder -v $PWD:/home/builder/workdir -e TERM=$TERM rudychung/tsg <spec.yaml> [--hide-preview-layers]` — spec path is relative to mounted dir. |
 | **Docker (GUI)** | `./run_tsg_docker.py` or `python3 run_tsg_docker.py`; choose directory and YAML in the GUI. |
 
-The [Makefile](Makefile) takes the trail directory and one or more line codes positionally, and runs the milestone + blank specs of each line as a single batch — e.g. `make generate 白姑大山 SM400`, or `make generate <trailDir> <CODE_A> <CODE_B>` for several lines at once. A bare `make` prints the available targets.
+The [Makefile](Makefile) takes the trail directory and one or more line codes positionally, and runs the milestone + blank specs of each line as a single batch — e.g. `make generate 白姑大山 SM400`, or `make generate <trailDir> <CODE_A> <CODE_B>` for several lines at once. Pass `HIDE_PREVIEW=1` to hide `input.preview_layers` (for aluminium production). A bare `make` prints the available targets.
 For maintainers, `make generate <trailDir> <LINE_CODE...>`, `make docker/generate <trailDir> <LINE_CODE...>` and `make clean <trailDir>` are available; the trail directory is validated to stay under the repo root.
 
 ---

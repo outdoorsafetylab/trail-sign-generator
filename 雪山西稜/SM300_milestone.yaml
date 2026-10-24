@@ -1,0 +1,37 @@
+input:
+  template: SM300_milestone.svg
+  data:
+    - SM300.csv
+    - SM300_reprints.csv
+  mask: mask.svg
+  # Layers hidden only when generating with --hide-preview-layers (crop marks / holes).
+  preview_layers:
+    - Layer 3
+  # Drawings hidden automatically when the named CSV column is blank.
+  hide_when_empty:
+    里程: mileage_bar
+  blank_template: SM300_blank.svg
+  blank_data: blank.csv
+  fill:
+    background_color:
+      主線: '#ffff00'
+      支線: '#f58635'
+output:
+  dir: output
+  prefix: SM300_主線_編碼路標_
+  w: 610
+  h: 488
+  slot:
+    # gsub:
+    #   '#000000;': '#000000 device-cmyk(0,0,0,1);'
+    #   '#ffffff;': '#ffffff device-cmyk(0,0,0,0);'
+    #   '#b2b2b2;': '#b2b2b2 device-cmyk(0,0,0,0.3);'
+    #   '#ffff00;': '#ffff00 device-cmyk(0,0,1,0);'
+    x: 26.28
+    y: 40.251
+    w: 112.035
+    h: 103.046
+    repeat:
+      # num: 6
+      x: 5
+      y: 4

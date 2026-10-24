@@ -1,0 +1,16 @@
+#!/bin/sh
+# Stand-in for Inkscape in tests: keeps the substituted SVG as it is (text is
+# not converted to paths) and writes an empty file for PDF exports.
+src=""; dest=""
+for a in "$@"; do
+  case "$a" in
+    --export-filename=*) dest="${a#--export-filename=}" ;;
+    --*) ;;
+    *) src="$a" ;;
+  esac
+done
+case "$dest" in
+  *.pdf) : > "$dest" ;;
+  *) [ "$src" != "$dest" ] && cp "$src" "$dest" ;;
+esac
+exit 0

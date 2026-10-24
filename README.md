@@ -18,6 +18,7 @@
   - inkscape
   - pdfunite
   - gs
+  - python3：只有 `make test` 需要，第一次執行會在 repo 裡建立 `.venv` 並安裝 PyYAML
 
 ## Cross-platform note
 
@@ -190,7 +191,7 @@ Page 2
 
 ## 測試
 
-改了產生器、樣版或資料之後跑一次：
+改了產生器、樣版或資料之後跑一次。第一次執行會先建立 `.venv`：
 
 ```bash
 $ make test

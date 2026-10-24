@@ -8,7 +8,7 @@ endif
 # Targets that take positional arguments, and every real target a positional
 # argument must not be confused with.
 TRAIL_TARGETS := clean generate docker/generate
-REAL_TARGETS := help clean generate docker/build docker/generate
+REAL_TARGETS := help clean generate test docker/build docker/generate
 
 # `clean` is the first target in this file and was therefore make's default
 # goal, so a bare `make` silently deleted 白姑大山/output — a whole batch of
@@ -72,6 +72,7 @@ help:
 	@echo "  docker/generate <trailDir> <LINE_CODE...>  the same, inside the docker image"
 	@echo "  docker/build                               build the docker image"
 	@echo "  clean <trailDir>                           remove <trailDir>/output"
+	@echo "  test                                       regression tests (tests/run_tests.py)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make generate 白姑大山 SM400"
@@ -85,6 +86,9 @@ help:
 
 clean:
 	rm -rf $(TRAIL)/output
+
+test:
+	python3 tests/run_tests.py
 
 # The milestone spec is required; the blank one is optional, because not every
 # line orders blank signs (several trails ship a milestone spec only).

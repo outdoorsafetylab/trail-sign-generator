@@ -57,6 +57,7 @@ ruby generate.rb <設定檔路徑> --hide-preview-layers   # 送鋁板：隱藏 
 input:
   template: 樣版檔 SVG
   data: 資料檔 CSV（也可列多個，表頭須相同，列會依序接續）
+  reprints: 加印檔 CSV  # 選填：從資料檔挑出要多印一面的路標，接在最後；每一欄都是比對條件，欄名須是資料檔的欄名
   mask: 遮罩檔 SVG (標示要切割反光材質的區域)
   preview_layers:        # 選填：校對用圖層／繪圖名稱（inkscape:label 或 id）
     - Layer 3            # 預設仍會印出；加上 --hide-preview-layers 才隱藏
@@ -187,6 +188,17 @@ Page 1
 Page 2
 ```
 
+## 測試
+
+改了產生器、樣版或資料之後跑一次：
+
+```bash
+$ make test
+```
+
+測試會把 repo 複製到暫存目錄，用 `tests/fakebin` 裡的替身取代 Inkscape、pdfunite 與 Ghostscript，再用 Ruby 與 Python 兩個產生器產生每一份 spec，比對產出的 SVG 與 `tests/expected/` 記錄的雜湊值；另用 `tests/fixtures/` 的小樣本檢查加印、補空、隱藏圖層與換色，以及應該停止產生的輸入。不會動到各步道的 `output/`。
+
+已送印的路標重新產生時必須和送印時相同，所以雜湊值不同就是失敗。確定是要的改變，例如新增步道或修改未送印的路標，再執行 `python3 tests/run_tests.py --update` 更新雜湊值，並在 PR 說明哪些檔案改變。
 
 ## 已知限制
 

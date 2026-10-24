@@ -84,6 +84,42 @@ def recolor_svg_elements(svg, names, color):
         return tag
     return re.sub(r'<[A-Za-z][\w:-]*\b[^>]*?>', repl, svg, flags=re.DOTALL)
 
+def resolve_reprints(path, headers, rows, tmpl_text, styling_columns):
+    """Reprints repeat signs that already exist in input.data, so they can never
+    drift from them. Each column of the reprints CSV names a data column to
+    match on. A row may match several signs only if they print the same, i.e.
+    agree on every column the template uses and every column that hides or
+    recolors a drawing (styling_columns); the first one is taken."""
+    printed = [
+        i for i, h in enumerate(headers) if h and (h in tmpl_text or h in styling_columns)
+    ]
+    def cell(row, i):
+        return row[i] if i < len(row) else ""
+    picked = []
+    with open(path, "r", encoding="utf-8-sig") as csvfile:
+        reader = csv.reader(csvfile)
+        keys = next(reader)
+        unknown = [k for k in keys if k not in headers]
+        if unknown:
+            print(f"Unknown column(s) in {path}: {', '.join(unknown)}", file=sys.stderr)
+            sys.exit(1)
+        want_cols = [headers.index(k) for k in keys]
+        for line_num, row in enumerate(reader, start=2):
+            want = [(c, cell(row, i)) for i, c in enumerate(want_cols)]
+            label = {k: cell(row, i) for i, k in enumerate(keys)}
+            matches = [r for r in rows if all(cell(r, c) == v for c, v in want)]
+            if not matches:
+                print(f"No sign in input.data matches {path} line {line_num}: {label}", file=sys.stderr)
+                sys.exit(1)
+            if len({tuple(cell(r, i) for i in printed) for r in matches}) > 1:
+                print(
+                    f"{path} line {line_num} matches {len(matches)} signs that print differently: {label}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            picked.append(matches[0])
+    return picked
+
 def line_kind(values):
     name = str(values.get('路線名稱') or '')
     if '支線' in name:
@@ -172,13 +208,13 @@ def main():
     headers = []
     total = 0
     last_kind = "主線"
-    reached_max = False
     with open(tmpl_svg, "r", encoding="utf-8") as tmpl_f:
         tmpl_text = tmpl_f.read()
 
     # utf-8-sig, not utf-8: CSVs exported from Excel carry a BOM, which would
     # otherwise stay glued to the first header name and stop that column's
     # placeholder from being substituted in the template.
+    rows = []
     for data_csv in data_csvs:
         print(f"Reading data CSV: {data_csv}")
         with open(data_csv, "r", encoding="utf-8-sig") as csvfile:
@@ -195,40 +231,45 @@ def main():
                         )
                         sys.exit(1)
                 else:
-                    sign_filename = f"sign_{total + 1:04d}.svg"
-                    sign_path = os.path.join(intermediate_dir, sign_filename)
+                    rows.append(row)
+    if input_spec.get("reprints"):
+        reprints_csv = os.path.join(base_dir, str(input_spec["reprints"]))
+        print(f"Reading reprints CSV: {reprints_csv}")
+        styling_columns = [str(h) for h in hide_when_empty] + (["路線名稱"] if fill else [])
+        rows.extend(resolve_reprints(reprints_csv, headers, rows, tmpl_text, styling_columns))
 
-                    svg = tmpl_text
-                    values = {}
-                    for col_idx, col_val in enumerate(row):
-                        col_val = col_val if col_val else ""
-                        header = headers[col_idx]
-                        values[header] = col_val
-                        svg = svg.replace(header, col_val)
+    for row in rows:
+        sign_filename = f"sign_{total + 1:04d}.svg"
+        sign_path = os.path.join(intermediate_dir, sign_filename)
 
-                    if hide_preview_layers:
-                        svg = hide_svg_elements(svg, hide_preview)
-                    for header, names in hide_when_empty.items():
-                        raw = values.get(str(header), "")
-                        if not str(raw).strip():
-                            svg = hide_svg_elements(svg, names)
-                    kind = line_kind(values)
-                    last_kind = kind
-                    for element, colors in fill.items():
-                        color = colors.get(kind) if isinstance(colors, dict) else colors
-                        svg = recolor_svg_elements(svg, element, color)
+        svg = tmpl_text
+        values = {}
+        for col_idx, col_val in enumerate(row):
+            col_val = col_val if col_val else ""
+            header = headers[col_idx]
+            values[header] = col_val
+            svg = svg.replace(header, col_val)
 
-                    with open(sign_path, "w", encoding="utf-8") as sign_f:
-                        sign_f.write(svg)
+        if hide_preview_layers:
+            svg = hide_svg_elements(svg, hide_preview)
+        for header, names in hide_when_empty.items():
+            raw = values.get(str(header), "")
+            if not str(raw).strip():
+                svg = hide_svg_elements(svg, names)
+        kind = line_kind(values)
+        last_kind = kind
+        for element, colors in fill.items():
+            color = colors.get(kind) if isinstance(colors, dict) else colors
+            svg = recolor_svg_elements(svg, element, color)
 
-                    print(f"Vectorizing SVG: {sign_path}")
-                    inkscape_export(sign_path)
+        with open(sign_path, "w", encoding="utf-8") as sign_f:
+            sign_f.write(svg)
 
-                    total += 1
-                    if max_num is not None and total >= max_num:
-                        reached_max = True
-                        break
-        if reached_max:
+        print(f"Vectorizing SVG: {sign_path}")
+        inkscape_export(sign_path)
+
+        total += 1
+        if max_num is not None and total >= max_num:
             break
 
     remain = (

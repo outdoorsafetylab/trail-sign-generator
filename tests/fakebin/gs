@@ -1,0 +1,5 @@
+#!/bin/sh
+# Stand-in for Ghostscript in tests: creates the output file, empty.
+for a in "$@"; do
+  case "$a" in -sOutputFile=*) : > "${a#-sOutputFile=}" ;; esac
+done

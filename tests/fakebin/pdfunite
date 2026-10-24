@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stand-in for pdfunite in tests: creates the output file, empty.
+for a in "$@"; do last="$a"; done
+: > "$last"

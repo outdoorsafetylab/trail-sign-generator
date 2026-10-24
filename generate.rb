@@ -93,6 +93,43 @@ def recolor_svg_elements(svg, names, color)
   end
 end
 
+# Reprints repeat signs that already exist in input.data, so they can never
+# drift from them. Each column of the reprints CSV names a data column to match
+# on. A row may match several signs only if they print the same, i.e. agree on
+# every column the template uses and every column that hides or recolors a
+# drawing (styling_columns); the first one is taken.
+def resolve_reprints(file, cols, rows, tmpl_text, styling_columns)
+  keys = nil
+  printed = cols.each_index.select do |i|
+    cols[i] && (tmpl_text.include?(cols[i]) || styling_columns.include?(cols[i]))
+  end
+  picked = []
+  CSV.foreach(file, encoding: 'bom|utf-8').with_index do |row, row_num|
+    if row_num.zero?
+      keys = row
+      unknown = keys - cols
+      unless unknown.empty?
+        warn "Unknown column(s) in #{file}: #{unknown.join(', ')}"
+        exit 1
+      end
+      next
+    end
+    want = keys.each_with_index.map { |k, i| [cols.index(k), row[i].to_s] }
+    matches = rows.select { |r| want.all? { |c, v| r[c].to_s == v } }
+    label = keys.zip(row.map(&:to_s)).to_h
+    if matches.empty?
+      warn "No sign in input.data matches #{file} line #{row_num + 1}: #{label}"
+      exit 1
+    end
+    if matches.map { |r| printed.map { |i| r[i].to_s } }.uniq.size > 1
+      warn "#{file} line #{row_num + 1} matches #{matches.size} signs that print differently: #{label}"
+      exit 1
+    end
+    picked << matches.first
+  end
+  picked
+end
+
 def line_kind(values)
   name = values['路線名稱'].to_s
   return '支線' if name.include?('支線')
@@ -161,6 +198,7 @@ tmpl_text = File.read(tmpl)
 
 sh "rm -rf #{output_dir}/intermediate/"
 
+rows = []
 data_files.each do |data|
   puts "Reading data CSV: #{data}"
   CSV.foreach(data, encoding: 'bom|utf-8').with_index do |row, row_num|
@@ -173,38 +211,47 @@ data_files.each do |data|
         exit 1
       end
     else
-      filename = sprintf("sign_%04d.svg", total + 1)
-      FileUtils.mkdir_p("#{output_dir}/intermediate/")
-      intermediate = "#{output_dir}/intermediate/#{filename}"
-      puts "Creating intermediate SVG: #{intermediate}"
-      svg = tmpl_text.dup
-      values = {}
-      row.each_with_index do |col, col_num|
-        col = "" unless col
-        header = cols[col_num]
-        values[header] = col
-        svg = svg.gsub(header, col) if header
-      end
-      svg = hide_svg_elements(svg, preview_layers) if hide_preview_layers
-      hide_when_empty.each do |header, names|
-        raw = values[header.to_s]
-        if raw.nil? || raw.to_s.strip.empty?
-          svg = hide_svg_elements(svg, names)
-        end
-      end
-      kind = line_kind(values)
-      last_kind = kind
-      fill.each do |element, colors|
-        color = colors.is_a?(Hash) ? colors[kind] : colors
-        svg = recolor_svg_elements(svg, element, color)
-      end
-      File.write(intermediate, svg)
-      puts "Vectorizing SVG: #{intermediate}"
-      inkscape_export(intermediate)
-      total += 1
-      break if max && total >= max
+      rows << row
     end
   end
+end
+if input['reprints']
+  reprints = File.join(base_dir, input['reprints'].to_s)
+  puts "Reading reprints CSV: #{reprints}"
+  styling_columns = hide_when_empty.keys.map(&:to_s) + (fill.empty? ? [] : ['路線名稱'])
+  rows.concat(resolve_reprints(reprints, cols, rows, tmpl_text, styling_columns))
+end
+
+rows.each do |row|
+  filename = sprintf("sign_%04d.svg", total + 1)
+  FileUtils.mkdir_p("#{output_dir}/intermediate/")
+  intermediate = "#{output_dir}/intermediate/#{filename}"
+  puts "Creating intermediate SVG: #{intermediate}"
+  svg = tmpl_text.dup
+  values = {}
+  row.each_with_index do |col, col_num|
+    col = "" unless col
+    header = cols[col_num]
+    values[header] = col
+    svg = svg.gsub(header, col) if header
+  end
+  svg = hide_svg_elements(svg, preview_layers) if hide_preview_layers
+  hide_when_empty.each do |header, names|
+    raw = values[header.to_s]
+    if raw.nil? || raw.to_s.strip.empty?
+      svg = hide_svg_elements(svg, names)
+    end
+  end
+  kind = line_kind(values)
+  last_kind = kind
+  fill.each do |element, colors|
+    color = colors.is_a?(Hash) ? colors[kind] : colors
+    svg = recolor_svg_elements(svg, element, color)
+  end
+  File.write(intermediate, svg)
+  puts "Vectorizing SVG: #{intermediate}"
+  inkscape_export(intermediate)
+  total += 1
   break if max && total >= max
 end
 
